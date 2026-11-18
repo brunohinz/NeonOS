@@ -43,9 +43,10 @@ def run(args, timeout=20, input=None, env=None):
 def as_root(args, password=None, timeout=60):
     if IS_ROOT:
         return run(args, timeout)
+    env = dict(os.environ, LC_ALL="C", LANG="C")  # mensagens do sudo em inglês (o código procura "password")
     if password:
-        return run(["sudo", "-S", "-p", "", *args], timeout, input=password + "\n")
-    return run(["sudo", "-n", *args], timeout)
+        return run(["sudo", "-S", "-p", "", *args], timeout, input=password + "\n", env=env)
+    return run(["sudo", "-n", *args], timeout, env=env)
 
 
 def read(path, default=None):
@@ -705,8 +706,60 @@ def restart_self(b):
     return {"ok": True}
 
 
+# ---------------------------------------------------------------- monitores (neon-display)
+NEON_DISPLAY = os.path.join(ROOT, "neon-display")
+UI_EVENTS = {"display-menu"}
+
+
+def displays():
+    if not (IS_LINUX and which("wlr-randr") and os.environ.get("WAYLAND_DISPLAY")):
+        return {"available": False}
+    code, out = run([sys.executable, NEON_DISPLAY, "list"], 15)
+    if code != 0:
+        return {"available": False, "error": out.strip()[-200:]}
+    return {"available": True, **json.loads(out)}
+
+
+def restart_shell():
+    """Fecha o Firefox da interface; o neonos-start.sh abre de novo já no tamanho dos monitores."""
+    def later():
+        time.sleep(0.8)
+        run(["pkill", "-f", "--", "--name neonos-shell"])
+    threading.Thread(target=later, daemon=True).start()
+
+
+def display_mode(b):
+    if not displays().get("available"):
+        raise ValueError("controle de monitores indisponível neste sistema")
+    code, out = run([sys.executable, NEON_DISPLAY, "mode", str(b.get("mode", ""))], 20)
+    if code != 0:
+        raise ValueError(out.strip()[-200:] or "falha ao mudar o modo")
+    restart_shell()
+    return {"ok": True, "mode": out.strip()}
+
+
+def display_primary(b):
+    name = str(b.get("name", ""))
+    if not re.fullmatch(r"[\w.-]{1,40}", name):
+        raise ValueError("nome de monitor inválido")
+    code, out = run([sys.executable, NEON_DISPLAY, "primary", name], 20)
+    if code != 0:
+        raise ValueError(out.strip()[-200:] or "falha")
+    restart_shell()
+    return {"ok": True}
+
+
+def ui_event(b):
+    t = str(b.get("type", ""))
+    if t not in UI_EVENTS:
+        raise ValueError("evento desconhecido")
+    emit(t, "", "ui")
+    return {"ok": True}
+
+
 # ---------------------------------------------------------------- HTTP
 GET = {
+    "/api/displays": lambda q: displays(),
     "/api/ping": lambda q: SYS,
     "/api/stats": lambda q: stats(),
     "/api/events": lambda q: events_since(int(q.get("since", 0))),
@@ -758,6 +811,9 @@ POST = {
     "/api/neon/rollback": lambda b: neon_job("Voltar versão do NeonOS", ["--rollback"], b),
     "/api/neon/repo": neon_repo,
     "/api/neon/restart": restart_self,
+    "/api/displays/mode": display_mode,
+    "/api/displays/primary": display_primary,
+    "/api/ui": ui_event,
 }
 
 

@@ -462,7 +462,7 @@ const Saver = {
 const Bye = {
   async play(label) {
     const o = el('div', 'bye');
-    o.innerHTML = `<pre class="bye-art"></pre><div class="bye-t"></div><pre class="bye-bar"></pre><pre class="bye-hex"></pre>`;
+    o.innerHTML = `<div class="bye-area"><pre class="bye-art"></pre><div class="bye-t"></div><pre class="bye-bar"></pre><pre class="bye-hex"></pre></div>`;
     document.body.appendChild(o); this.el = o;
     $('.bye-art', o).textContent = Ascii.LOGO;
     Ascii.scramble($('.bye-t', o), `${label.toUpperCase()} · DESCONECTANDO ${SYS.user.toUpperCase()} DA REDE NEON`, 600);

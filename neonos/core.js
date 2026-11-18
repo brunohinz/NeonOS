@@ -82,10 +82,10 @@ function pollEvents() {
   const tick = async () => {
     try {
       const r = await api('/api/events?' + qs({ since: last ?? 0 }));
-      if (last !== null) r.events.forEach(e => toast(e.title, e.body, e.kind));
+      if (last !== null) r.events.forEach(e => e.kind === 'ui' ? uiEvent(e.title) : toast(e.title, e.body, e.kind));
       last = r.last;
     } catch {}
-    setTimeout(tick, 2000);
+    setTimeout(tick, 800);
   };
   tick();
 }
@@ -161,7 +161,7 @@ function ask({ title, text = '', input = null, value = '', ok = 'OK', cancel = '
 async function rootCall(path, body = {}) {
   let r = await api(path, body);
   if (r.need_password) {
-    const pw = await ask({ title: 'Autorização', text: `Digite a senha do usuário ${SYS.user} para continuar.`, input: 'password', ok: 'Autorizar' });
+    const pw = await ask({ title: 'Senha de administrador', text: `Esta ação muda uma configuração do sistema. Digite a senha do usuário ${SYS.user}${SYS.live ? ' (no modo live a senha é: live)' : ' (a mesma que você criou no instalador)'}.`, input: 'password', ok: 'Autorizar' });
     if (pw == null) return null;
     r = await api(path, { ...body, password: pw });
     if (r.need_password) { toast('Senha incorreta', '', 'err'); return null; }
@@ -203,8 +203,20 @@ const Wall = {
     this.dirty = true; this.asc = null;
   },
   draw(t) {
+    this.g.globalAlpha = 1;
+    const mons = this.monitors && this.monitors.length > 1 && !this.mode.startsWith('ascii-') ? this.monitors : null;
+    if (!mons) { this.adv = true; return this.drawOne(t); }
+    const { g, d } = this, W0 = this.W, H0 = this.H, dirty = this.dirty;
+    if (dirty) { g.fillStyle = '#000'; g.fillRect(0, 0, W0, H0); }
+    mons.forEach((m, i) => {
+      g.save(); g.translate(m.x * d, m.y * d); g.beginPath(); g.rect(0, 0, m.w * d, m.h * d); g.clip();
+      this.W = m.w * d | 0; this.H = m.h * d | 0; this.dirty = dirty; this.adv = i === 0;
+      this.drawOne(t); g.restore();
+    });
+    this.W = W0; this.H = H0; this.dirty = false;
+  },
+  drawOne(t) {
     const { g, W, H } = this;
-    g.globalAlpha = 1;
     if (this.mode.startsWith('ascii-')) {
       const fx = Ascii.FX[this.mode.slice(6)] || Ascii.FX.city;
       if (!this.asc || this.asc.fx !== fx) { this.asc = new AsciiScreen(this.cv, { size: 15 * this.d, managed: true }); this.asc.fx = fx; fx.init && fx.init(this.asc); }
@@ -255,7 +267,7 @@ const Wall = {
       g.globalAlpha = 1;
     }));
     g.strokeStyle = 'rgba(160,200,255,.32)'; g.lineWidth = d; g.beginPath();
-    this.drops.forEach(p => { p.y += p.s * .014; if (p.y > 1) { p.y = -p.l; p.x = Math.random() * 1.1; } const x = p.x * W, y = p.y * H; g.moveTo(x, y); g.lineTo(x - p.l * H * .15, y + p.l * H); });
+    this.drops.forEach(p => { if (this.adv) { p.y += p.s * .014; if (p.y > 1) { p.y = -p.l; p.x = Math.random() * 1.1; } } const x = p.x * W, y = p.y * H; g.moveTo(x, y); g.lineTo(x - p.l * H * .15, y + p.l * H); });
     g.stroke();
   },
   warp() {
@@ -263,8 +275,8 @@ const Wall = {
     g.fillStyle = this.dirty ? '#05060a' : 'rgba(5,6,10,.35)'; g.fillRect(0, 0, W, H); this.dirty = false;
     const cx = W / 2, cy = H / 2; g.strokeStyle = this.acc; g.lineCap = 'round';
     this.stars.forEach(s => {
-      const pz = s.z; s.z -= .006;
-      if (s.z <= .02) { s.x = Math.random() * 2 - 1; s.y = Math.random() * 2 - 1; s.z = 1; return; }
+      if (this.adv) { s.z -= .006; if (s.z <= .02) { s.x = Math.random() * 2 - 1; s.y = Math.random() * 2 - 1; s.z = 1; return; } }
+      const pz = Math.min(1, s.z + .006);
       g.globalAlpha = 1 - s.z; g.lineWidth = (1 - s.z) * 2.2 * d; g.beginPath();
       g.moveTo(cx + s.x / pz * W * .5, cy + s.y / pz * H * .5); g.lineTo(cx + s.x / s.z * W * .5, cy + s.y / s.z * H * .5); g.stroke();
     });
@@ -291,10 +303,12 @@ function openApp(id, arg) {
   }
   const wid = ++winSeq, n = WINS.size % 8;
   const w = el('div', 'win' + (app.max ? ' max' : ''));
-  const W = Math.min(app.w || 560, innerWidth - 40), H = Math.min(app.h || 380, innerHeight - 100);
-  w.style.cssText = `left:${Math.max(10, Math.min(120 + n * 28, innerWidth - W - 10))}px;top:${Math.max(10, Math.min(40 + n * 24, innerHeight - H - 60))}px;width:${W}px;height:${H}px`;
+  const P = PRIMARY || { x: 0, y: 0, w: innerWidth, h: innerHeight };
+  const W = Math.min(app.w || 560, P.w - 40), H = Math.min(app.h || 380, P.h - 100);
+  w.style.cssText = `left:${P.x + Math.max(10, Math.min(120 + n * 28, P.w - W - 10))}px;top:${P.y + Math.max(10, Math.min(40 + n * 24, P.h - H - 60))}px;width:${W}px;height:${H}px`;
   w.innerHTML = `<div class="bar"><span class="t"></span><button class="m" title="Minimizar">_</button><button class="M" title="Maximizar">□</button><button class="x" title="Fechar">✕</button></div><div class="body"></div>`;
-  $('#desktop').appendChild(w);
+  $('#wins').appendChild(w);
+  if (app.max) toggleMax(w, true);
   const task = el('button', 'task');
   $('#tasks').appendChild(task);
   const rec = { id: wid, app: id, el: w, task, cleanup: [], onArg: null };
@@ -309,8 +323,8 @@ function openApp(id, arg) {
   w.addEventListener('pointerdown', () => focusWin(wid));
   $('.x', w).onclick = e => { e.stopPropagation(); closeWin(wid); };
   $('.m', w).onclick = e => { e.stopPropagation(); w.classList.add('min'); w.classList.remove('focus'); refreshTasks(); };
-  $('.M', w).onclick = () => w.classList.toggle('max');
-  $('.bar', w).ondblclick = e => { if (e.target.tagName !== 'BUTTON') w.classList.toggle('max'); };
+  $('.M', w).onclick = () => toggleMax(w);
+  $('.bar', w).ondblclick = e => { if (e.target.tagName !== 'BUTTON') toggleMax(w); };
   task.onclick = () => {
     if (w.classList.contains('min')) { w.classList.remove('min'); focusWin(wid); }
     else if (w.classList.contains('focus')) { w.classList.add('min'); w.classList.remove('focus'); refreshTasks(); }
@@ -320,6 +334,17 @@ function openApp(id, arg) {
   try { app.mount($('.body', w), ctx, arg); } catch (e) { console.error(e); toast('Erro no app ' + app.name, e.message, 'err'); }
   focusWin(wid); Sfx.open(); bus.emit('wins');
   return rec;
+}
+/* maximizar ocupa só o monitor onde a janela está */
+function monitorAt(x, y) { return MONS.find(m => x >= m.x && x < m.x + m.w && y >= m.y && y < m.y + m.h) || PRIMARY; }
+function toggleMax(w, force) {
+  const on = force ?? !w.classList.contains('max');
+  if (on) {
+    const m = monitorAt(w.offsetLeft + w.offsetWidth / 2, w.offsetTop + 20) || { x: 0, y: 0, w: innerWidth, h: innerHeight, primary: true };
+    w.style.setProperty('--mx', m.x + 'px'); w.style.setProperty('--my', m.y + 'px');
+    w.style.setProperty('--mw', m.w + 'px'); w.style.setProperty('--mh', (m.h - (m === PRIMARY ? 44 : 0)) + 'px');
+  }
+  w.classList.toggle('max', on);
 }
 function focusWin(wid) {
   for (const r of WINS.values()) r.el.classList.toggle('focus', r.id === wid);
@@ -525,6 +550,7 @@ document.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if (e.ctrlKey && e.altKey && k === 'l') { e.preventDefault(); Lock.show(); }
   else if (e.altKey && !e.ctrlKey && k === 't') { e.preventDefault(); openApp('terminal'); }
+  else if (e.metaKey && k === 'p') { e.preventDefault(); showDisplayMenu(); }
   else if ((e.ctrlKey && k === 'escape') || (e.key === 'Meta' && !e.repeat)) toggleStart();
 });
 
@@ -553,6 +579,90 @@ function bootScreen() {
   });
 }
 
+/* ---------------------------------------------------------- monitores (Super+P) */
+let MONS = [], PRIMARY = null, DISP = null;
+function setupMonitors(d) {
+  if (d !== undefined) DISP = d;
+  const W = innerWidth, H = innerHeight;
+  let mons = [];
+  if (DISP && DISP.available && DISP.bbox && DISP.monitors.length) {
+    const bb = DISP.bbox;
+    if (Math.abs(W - bb.w) < 24 && Math.abs(H - bb.h) < 24) mons = DISP.monitors.map(m => ({ ...m, x: m.x - bb.x, y: m.y - bb.y }));
+  }
+  if (!mons.length) mons = [{ name: 'tela', label: 'Tela', x: 0, y: 0, w: W, h: H, primary: true }];
+  MONS = mons; PRIMARY = mons.find(m => m.primary) || mons[0];
+  const r = document.documentElement.style;
+  r.setProperty('--px', PRIMARY.x + 'px'); r.setProperty('--py', PRIMARY.y + 'px');
+  r.setProperty('--pw', PRIMARY.w + 'px'); r.setProperty('--ph', PRIMARY.h + 'px');
+  Wall.monitors = mons; Wall.dirty = true;
+  $$('.mon-label').forEach(e => e.remove());
+  mons.filter(m => m !== PRIMARY).forEach((m, i) => {
+    const l = el('div', 'mon-label', `<pre class="awave" data-w="20"></pre><b>TELA ${i + 2}</b><small>${esc(m.label)}</small><pre class="mon-clock"></pre>`);
+    l.style.left = m.x + m.w - 290 + 'px'; l.style.top = m.y + 26 + 'px';
+    document.body.appendChild(l);
+  });
+}
+const DMODES = [
+  ['pc', 'Só a tela principal', '┌────┐ ┌────┐\n│▓▓▓▓│ │    │\n└────┘ └────┘'],
+  ['duplicate', 'Duplicar', '┌────┐ ┌────┐\n│▓▓▓▓│ │▓▓▓▓│\n└────┘ └────┘'],
+  ['extend', 'Estender', '┌────┐┌────┐\n│▓▓▓▓││▒▒▒▒│\n└────┘└────┘'],
+  ['second', 'Só a segunda tela', '┌────┐ ┌────┐\n│    │ │▓▓▓▓│\n└────┘ └────┘'],
+];
+/* painel com os modos (usado no Super+P e em Config → Monitores) */
+function displayPanel(box, onDone) {
+  const d = DISP || {};
+  const cur = d.mode || 'extend';
+  const n = (d.connected || []).length;
+  box.innerHTML = `<div class="dm-cards">${DMODES.map(([k, l, art]) => `<button class="dm-card${k === cur ? ' cur' : ''}" data-m="${k}"><pre>${art}</pre><span>${l}</span></button>`).join('')}</div>
+    <div class="dm-info c-d">${!d.available ? 'O controle de monitores só funciona no NeonOS (aqui é modo de desenvolvimento).'
+      : `${n} monitor${n > 1 ? 'es conectados' : ' conectado'}: ${(d.connected || []).map(x => `<span class="${x === d.primary ? 'c-a' : ''}">${esc(x)}${x === d.primary ? ' (principal)' : ''}</span>`).join(' · ')}${n > 1 ? ' · <button class="mini dm-prim">trocar principal</button>' : ''}`}</div>`;
+  const cards = $$('.dm-card', box);
+  let sel = Math.max(0, DMODES.findIndex(m => m[0] === cur));
+  const mark = () => cards.forEach((c, i) => c.classList.toggle('sel', i === sel));
+  const go = async i => {
+    const mode = DMODES[i][0];
+    if (!d.available) return toast('Monitores', 'Disponível só no NeonOS', 'err');
+    if (n < 2 && mode !== 'pc') return toast('Só um monitor detectado', 'Conecte outro monitor e tente de novo', 'err');
+    onDone && onDone();
+    if (mode === d.mode) return;
+    toast('Ajustando monitores', DMODES[i][1] + ' — a interface vai reabrir em instantes');
+    const r = await api('/api/displays/mode', { mode }).catch(e => ({ error: e.message }));
+    if (r.error) toast('Monitores', r.error, 'err');
+  };
+  cards.forEach((c, i) => { c.onclick = () => go(i); c.onmouseenter = () => { sel = i; mark(); }; });
+  if ($('.dm-prim', box)) $('.dm-prim', box).onclick = async () => {
+    const others = d.connected.filter(x => x !== d.primary);
+    const name = others.length === 1 ? others[0] : await ask({ title: 'Monitor principal', text: 'Nome do monitor: ' + others.join(', '), input: 'text', value: others[0] });
+    if (!name) return;
+    onDone && onDone();
+    const r = await api('/api/displays/primary', { name }).catch(e => ({ error: e.message }));
+    r.error ? toast('Monitores', r.error, 'err') : toast('Monitor principal', name + ' — a interface vai reabrir', 'ok');
+  };
+  mark();
+  return { next: () => { sel = (sel + 1) % cards.length; mark(); }, prev: () => { sel = (sel + cards.length - 1) % cards.length; mark(); }, apply: () => go(sel) };
+}
+async function showDisplayMenu() {
+  const open = $('.dmenu');
+  if (open) { open._ctl.next(); return; }
+  DISP = await api('/api/displays').catch(() => ({ available: false }));
+  const m = el('div', 'modal dmenu', `<div class="box"><h3>// PROJETAR</h3><div class="dm-body"></div><p class="c-d" style="font-size:11px">Super+P ou ←/→ escolhe · Enter aplica · Esc fecha</p></div>`);
+  document.body.appendChild(m);
+  Ascii.scramble($('h3', m), '// PROJETAR', 300); Sfx.open();
+  const close = () => { m.remove(); document.removeEventListener('keydown', key, true); };
+  m._ctl = displayPanel($('.dm-body', m), close);
+  const key = e => {
+    if (['ArrowRight', 'ArrowDown'].includes(e.key) || (e.metaKey && e.key.toLowerCase() === 'p')) { e.preventDefault(); m._ctl.next(); }
+    else if (['ArrowLeft', 'ArrowUp'].includes(e.key)) { e.preventDefault(); m._ctl.prev(); }
+    else if (e.key === 'Enter') { e.preventDefault(); m._ctl.apply(); }
+    else if (e.key === 'Escape') { e.preventDefault(); close(); }
+    else return;
+    e.stopPropagation();
+  };
+  document.addEventListener('keydown', key, true);
+  m.addEventListener('pointerdown', e => { if (e.target === m) close(); });
+}
+function uiEvent(type) { if (type === 'display-menu' && !Lock.on) showDisplayMenu(); }
+
 /* aviso de atualizações (a lista do apt é renovada todo dia pelo próprio Debian) */
 async function checkUpdates() {
   const open = () => openApp('settings', 'upd');
@@ -575,6 +685,9 @@ async function start() {
     return;
   }
   $('#lock .user').textContent = `${SYS.user}@${SYS.host || 'neon'}`.toUpperCase();
+  setupMonitors(await api('/api/displays').catch(() => ({ available: false })));
+  addEventListener('resize', () => setupMonitors());
+  setInterval(() => $$('.mon-clock').forEach(c => c.textContent = Ascii.big(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))), 1000);
   buildDesktop(); buildStart(); trayInit(); refreshNetIcon(); pollStats(); pollEvents();
   api('/api/audio').then(setVolIcon).catch(() => {});
   $('#startBtn').onclick = e => { e.stopPropagation(); toggleStart(); };

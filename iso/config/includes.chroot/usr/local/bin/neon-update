@@ -31,6 +31,7 @@ install_cmds() {
   install -m755 "$OPT/neon" /usr/local/bin/neon
   install -m755 "$OPT/neon-notify" /usr/local/bin/neon-notify
   install -m755 "$OPT/neon-browser.sh" /usr/local/bin/neon-browser
+  [ -f "$OPT/neon-display" ] && install -m755 "$OPT/neon-display" /usr/local/bin/neon-display
   install -m755 "$OPT/neon-update" /usr/local/bin/neon-update   # install troca o arquivo sem afetar este processo
 }
 
@@ -99,10 +100,11 @@ apply() {
   [ -d "$src/neonos/vendor" ] || cp -a "$OPT/vendor" "$src/neonos/" 2>/dev/null || true
   rm -rf "$OPT.new"; cp -a "$src/neonos" "$OPT.new"
   rm -rf "$OPT"; mv "$OPT.new" "$OPT"
-  chmod +x "$OPT"/*.sh "$OPT/neon" "$OPT/neon-notify" "$OPT/neon-update" 2>/dev/null || true
+  chmod +x "$OPT"/*.sh "$OPT/neon" "$OPT/neon-notify" "$OPT/neon-update" "$OPT/neon-display" 2>/dev/null || true
   install_cmds
 
   inc="$src/iso/config/includes.chroot"
+  if [ -d "$inc/usr/share/icons" ]; then cp -a "$inc/usr/share/icons/." /usr/share/icons/; fi   # tema de cursor
   if [ -d "$inc/usr/share/neonos" ]; then mkdir -p /usr/share/neonos; cp -a "$inc/usr/share/neonos/." /usr/share/neonos/; fi
   if [ -d "$inc/usr/share/plymouth/themes/neonos" ] && ! diff -rq "$inc/usr/share/plymouth/themes/neonos" /usr/share/plymouth/themes/neonos >/dev/null 2>&1; then
     say "atualizando a tela de boot…"

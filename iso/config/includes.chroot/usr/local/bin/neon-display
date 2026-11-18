@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+"""neon-display — monitores do NeonOS (os modos do Win+P)
+
+  neon-display list            monitores e layout atual (JSON)
+  neon-display mode MODO       pc | duplicate | extend | second
+  neon-display primary NOME    escolhe o monitor principal (barra de tarefas e ícones)
+  neon-display apply           reaplica o modo salvo (usado no login)
+  neon-display shell-rule      ajusta a janela da interface para cobrir todos os monitores
+"""
+import json, os, re, subprocess, sys
+
+STATE = os.path.expanduser("~/.config/neonos/display.json")
+RC = os.path.expanduser("~/.config/labwc/rc.xml")
+BEGIN, END = "<!-- neonos:shell-begin -->", "<!-- neonos:shell-end -->"
+MODES = ("pc", "duplicate", "extend", "second")
+
+
+def randr(*args):
+    return subprocess.run(["wlr-randr", *args], capture_output=True, text=True, timeout=15)
+
+
+def load_state():
+    try:
+        with open(STATE) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {"mode": "extend", "primary": None}
+
+
+def save_state(st):
+    os.makedirs(os.path.dirname(STATE), exist_ok=True)
+    with open(STATE, "w") as f:
+        json.dump(st, f)
+
+
+def outputs():
+    r = randr("--json")
+    if r.returncode != 0:
+        raise SystemExit("wlr-randr falhou: " + r.stderr.strip())
+    return json.loads(r.stdout)
+
+
+def mode_of(o, current=True):
+    modes = o.get("modes") or []
+    for key in (("current", "preferred") if current else ("preferred", "current")):
+        for m in modes:
+            if m.get(key):
+                return m
+    return modes[0] if modes else {"width": 1920, "height": 1080}
+
+
+def logical_size(o):
+    m = mode_of(o, current=o.get("enabled", False))
+    w, h = m["width"], m["height"]
+    if str(o.get("transform", "normal")) in ("90", "270", "flipped-90", "flipped-270"):
+        w, h = h, w
+    s = float(o.get("scale") or 1.0)
+    return round(w / s), round(h / s)
+
+
+def internal_first(outs):
+    # telas de notebook (eDP/LVDS/DSI) são o "PC" por padrão
+    return sorted(outs, key=lambda o: 0 if re.match(r"(eDP|LVDS|DSI)", o["name"]) else 1)
+
+
+def pick_primary(outs, st):
+    names = [o["name"] for o in outs]
+    if st.get("primary") in names:
+        return st["primary"]
+    return internal_first(outs)[0]["name"] if outs else None
+
+
+def layout():
+    outs, st = outputs(), load_state()
+    prim = pick_primary(outs, st)
+    mons = []
+    for o in outs:
+        if not o.get("enabled"):
+            continue
+        w, h = logical_size(o)
+        p = o.get("position") or {"x": 0, "y": 0}
+        mons.append({"name": o["name"], "label": " ".join(x for x in (o.get("make"), o.get("model")) if x and x != "Unknown") or o["name"],
+                     "x": p["x"], "y": p["y"], "w": w, "h": h, "primary": o["name"] == prim})
+    if mons and not any(m["primary"] for m in mons):
+        mons[0]["primary"] = True
+    bbox = None
+    if mons:
+        x0, y0 = min(m["x"] for m in mons), min(m["y"] for m in mons)
+        x1, y1 = max(m["x"] + m["w"] for m in mons), max(m["y"] + m["h"] for m in mons)
+        bbox = {"x": x0, "y": y0, "w": x1 - x0, "h": y1 - y0}
+    return {"mode": st.get("mode", "extend"), "primary": prim, "connected": [o["name"] for o in outs],
+            "monitors": mons, "bbox": bbox}
+
+
+def set_mode(mode):
+    if mode not in MODES:
+        raise SystemExit(f"modo inválido: {mode} (use {', '.join(MODES)})")
+    outs, st = outputs(), load_state()
+    prim = pick_primary(outs, st)
+    others = [o for o in internal_first(outs) if o["name"] != prim]
+    p = next((o for o in outs if o["name"] == prim), None)
+    if p is None:
+        raise SystemExit("nenhum monitor encontrado")
+    if not others and mode != "pc":
+        mode = "pc"  # só um monitor: não há o que estender
+    args = []
+
+    def on(o, x, y):
+        args.extend(["--output", o["name"], "--on", "--pos", f"{x},{y}"])
+        if not o.get("enabled"):
+            args.append("--preferred")
+
+    def off(o):
+        args.extend(["--output", o["name"], "--off"])
+
+    if mode == "pc":
+        on(p, 0, 0); [off(o) for o in others]
+    elif mode == "second":
+        on(others[0], 0, 0); off(p); [off(o) for o in others[1:]]
+    elif mode == "duplicate":
+        on(p, 0, 0); [on(o, 0, 0) for o in others]
+    else:  # extend: principal à esquerda, os outros em sequência à direita
+        x = 0
+        for o in [p, *others]:
+            on(o, x, 0)
+            x += logical_size(o)[0]
+    r = randr(*args)
+    if r.returncode != 0:
+        raise SystemExit("wlr-randr falhou: " + r.stderr.strip())
+    st["mode"], st["primary"] = mode, prim
+    save_state(st)
+    return mode
+
+
+def shell_rule():
+    """Reescreve a regra da janela da interface no rc.xml para cobrir todos os monitores."""
+    try:
+        bb = layout()["bbox"]
+    except SystemExit:
+        bb = None
+    if bb:
+        rule = (f'{BEGIN}\n    <windowRule identifier="neonos-shell" serverDecoration="no" skipTaskbar="yes">\n'
+                f'      <action name="MoveTo" x="{bb["x"]}" y="{bb["y"]}" />\n'
+                f'      <action name="ResizeTo" width="{bb["w"]}" height="{bb["h"]}" />\n'
+                f'    </windowRule>\n    {END}')
+    else:
+        rule = (f'{BEGIN}\n    <windowRule identifier="neonos-shell" serverDecoration="no" skipTaskbar="yes">\n'
+                f'      <action name="Maximize" />\n    </windowRule>\n    {END}')
+    try:
+        with open(RC) as f:
+            xml = f.read()
+    except OSError:
+        return
+    if BEGIN in xml and END in xml:
+        new = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), lambda m: rule, xml, flags=re.S)
+    else:
+        new = xml.replace("<windowRules>", "<windowRules>\n    " + rule, 1)
+    if new != xml:
+        with open(RC, "w") as f:
+            f.write(new)
+    subprocess.run(["labwc", "--reconfigure"], capture_output=True)
+
+
+def main():
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "list"
+    if cmd == "list":
+        print(json.dumps(layout()))
+    elif cmd == "mode":
+        print(set_mode(sys.argv[2] if len(sys.argv) > 2 else ""))
+    elif cmd == "primary":
+        st = load_state(); st["primary"] = sys.argv[2]; save_state(st)
+        set_mode(st.get("mode", "extend"))
+    elif cmd == "apply":
+        try:
+            set_mode(load_state().get("mode", "extend"))
+        except SystemExit as e:
+            print(e, file=sys.stderr)
+    elif cmd == "shell-rule":
+        shell_rule()
+    else:
+        print(__doc__)
+
+
+if __name__ == "__main__":
+    main()

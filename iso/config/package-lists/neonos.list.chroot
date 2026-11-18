@@ -18,6 +18,7 @@ fastfetch
 # Interface: compositor Wayland leve + Firefox
 labwc
 wlrctl
+wlr-randr
 xwayland
 libgl1-mesa-dri
 firefox-esr

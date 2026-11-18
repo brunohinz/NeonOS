@@ -19,6 +19,7 @@ cp ../neonos/neon-browser.sh "$inc/usr/local/bin/neon-browser"
 cp ../neonos/neon-notify "$inc/usr/local/bin/neon-notify"
 cp ../neonos/neon "$inc/usr/local/bin/neon"
 cp ../neonos/neon-update "$inc/usr/local/bin/neon-update"
+cp ../neonos/neon-display "$inc/usr/local/bin/neon-display"
 chmod +x auto/config config/hooks/normal/*.hook.chroot "$inc/usr/local/bin/"* "$inc/opt/neonos/"*.sh \
          "$inc/etc/skel/.config/labwc/neonos-start.sh"
 

@@ -2,7 +2,7 @@
 # Ajustes finais do NeonOS dentro do sistema (roda durante a montagem da ISO)
 set -e
 
-chmod +x /usr/local/bin/neon /usr/local/bin/neon-update /usr/local/bin/neon-browser /usr/local/bin/neon-notify /opt/neonos/*.sh /opt/neonos/neon /opt/neonos/neon-update /opt/neonos/neon-notify || true
+chmod +x /usr/local/bin/neon /usr/local/bin/neon-update /usr/local/bin/neon-display /usr/local/bin/neon-browser /usr/local/bin/neon-notify /opt/neonos/*.sh /opt/neonos/neon /opt/neonos/neon-update /opt/neonos/neon-display /opt/neonos/neon-notify || true
 chmod +x /etc/skel/.config/labwc/neonos-start.sh || true
 
 # tela de boot

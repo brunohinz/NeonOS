@@ -396,7 +396,7 @@ APPS.hud = { name: 'Implante', icon: '◈', w: 900, h: 600, single: true, mount(
 
 /* ------------------------------------------------------------ Configurações */
 APPS.settings = { name: 'Config', icon: '⚙', w: 680, h: 460, single: true, mount(body, ctx, tab) {
-  const TABS = { look: 'Aparência', fx: 'Animações', sound: 'Som', sec: 'Segurança', upd: 'Atualizações', sys: 'Sistema' };
+  const TABS = { look: 'Aparência', fx: 'Animações', tela: 'Monitores', sound: 'Som', sec: 'Segurança', upd: 'Atualizações', sys: 'Sistema' };
   body.innerHTML = `<div class="set"><nav>${Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}">${v}</button>`).join('')}</nav><section></section></div>`;
   const sec = $('section', body);
   const R = {
@@ -420,6 +420,13 @@ APPS.settings = { name: 'Config', icon: '⚙', w: 680, h: 460, single: true, mou
       $('.sv', sec).onchange = e => { SETTINGS.saver = +e.target.value; saveSettings(); };
       $$('[data-ef]', sec).forEach(b => b.onclick = () => { SETTINGS.saverFx = b.dataset.ef; saveSettings(); R.fx(); });
       $('.tst', sec).onclick = () => Saver.show(SETTINGS.saverFx);
+    },
+    async tela() {
+      sec.innerHTML = `<div><h5>MODO DOS MONITORES</h5><div class="dm-body">${Ascii.loading('detectando monitores')}</div></div>
+        <div><h5>ATALHO</h5><p class="c-d">Aperte <b>Super+P</b> (tecla Windows + P) em qualquer lugar para trocar rápido, como no Windows.</p>
+        <p class="c-d">Em "Estender", cada monitor tem o seu papel de parede, as janelas podem ser arrastadas entre eles, e maximizar ocupa só o monitor da janela. A barra de tarefas fica no monitor principal.</p></div>`;
+      DISP = await api('/api/displays').catch(() => ({ available: false }));
+      displayPanel($('.dm-body', sec));
     },
     sound() {
       sec.innerHTML = `<div><h5>SONS DA INTERFACE</h5><label class="row"><input type="checkbox" class="sf" ${SETTINGS.sound ? 'checked' : ''}> Bipes ao abrir/fechar janelas, notificações e inicialização</label>

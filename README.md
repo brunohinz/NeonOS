@@ -54,3 +54,13 @@ O resultado fica em `iso/out/neonos-amd64.iso`. Grave num pendrive com o balenaE
 ## Steam
 
 Vem pré-instalada (`steam-installer` + bibliotecas de 32 bits). Na primeira abertura, ela baixa a própria atualização (~300 MB) e pede para entrar na conta, onde você aceita o acordo de assinante da Valve.
+
+## Monitores (Super+P)
+
+- `neonos/neon-display` usa o `wlr-randr` para os modos **Só a tela principal**, **Duplicar**, **Estender** (padrão) e **Só a segunda tela**. O modo escolhido fica salvo em `~/.config/neonos/display.json` e é reaplicado no login.
+- No modo Estender, a janela da interface cobre todos os monitores: o `neon-display shell-rule` reescreve a regra `neonos-shell` do `rc.xml` com o tamanho total. A página recebe o layout por `/api/displays` e desenha um papel de parede por monitor. A barra de tarefas e os ícones ficam no monitor principal, e maximizar ocupa só o monitor da janela.
+- Super+P (atalho do labwc) abre o menu. Também está em Config → Monitores.
+
+## Cursor
+
+O tema **Neon** (`/usr/share/icons/Neon`) é gerado por `iso/cursor/make-cursors.py`, que usa python3-pil e xcursorgen. As cópias em PNG ficam em `neonos/cursors/` e são usadas pela interface.
