@@ -681,8 +681,9 @@ async function start() {
   const ok = connectBackend();
   await bootScreen();
   if (!await ok) {
-    toast('Backend offline', 'Inicie a interface com: python3 server.py', 'err');
-    return;
+    // backend ainda subindo (PC lento ou boot pesado): continua tentando em vez de desistir
+    toast('Conectando ao sistema…', 'O backend ainda está iniciando', 'info');
+    while (!await connectBackend()) await sleep(1000);
   }
   $('#lock .user').textContent = `${SYS.user}@${SYS.host || 'neon'}`.toUpperCase();
   setupMonitors(await api('/api/displays').catch(() => ({ available: false })));
