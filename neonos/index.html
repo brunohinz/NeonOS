@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NeonOS</title>
+<link rel="stylesheet" href="vendor/xterm.css">
+<link rel="stylesheet" href="neon.css">
+</head>
+<body>
+<canvas id="wall"></canvas>
+<div id="boot">
+  <pre class="hex"></pre>
+  <div class="boot-main"><pre class="logo"></pre><div id="bootLog"></div><pre class="prog"></pre></div>
+  <div class="hint">[clique ou tecle para pular]</div>
+</div>
+
+<div id="desktop">
+  <div class="wordmark"><pre class="wm-logo"></pre><pre class="wm-tick"></pre><small>v0.3 · LINUX · KERNEL GHOST</small></div>
+  <div id="icons"></div>
+</div>
+
+<div id="startMenu"></div>
+<div id="taskbar">
+  <button id="startBtn">▲ NEON</button>
+  <div id="tasks"></div>
+  <div id="tray">
+    <span id="tCpu" class="ti"></span>
+    <span id="tBat" class="ti" style="display:none"></span>
+    <button id="tNet" class="ti" title="Rede"></button>
+    <button id="tQuick" class="ti" title="Som e brilho"></button>
+    <button id="clock" class="ti">--:--</button>
+  </div>
+</div>
+<div id="toasts"></div>
+<div id="lock">
+  <div class="box">
+    <canvas id="lockFx"></canvas>
+    <pre id="lockClock"></pre><div id="lockDate"></div>
+    <div class="user"></div>
+    <input id="lockPw" class="field" type="password" placeholder="senha" autocomplete="off">
+    <div id="lockMsg"></div><div class="hint"></div>
+  </div>
+</div>
+<div class="scan"></div>
+
+<script src="vendor/xterm.js"></script>
+<script src="vendor/xterm-addon-fit.js"></script>
+<script src="core.js"></script>
+<script src="ascii.js"></script>
+<script src="apps.js"></script>
+</body>
+</html>

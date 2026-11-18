@@ -1,0 +1,101 @@
+# NeonOS — tela de boot (Plymouth script)
+
+Window.SetBackgroundTopColor(0.02, 0.02, 0.04);
+Window.SetBackgroundBottomColor(0.10, 0.02, 0.15);
+
+cx = Window.GetX() + Window.GetWidth() / 2;
+cy = Window.GetY() + Window.GetHeight() / 2;
+
+logo_img = Image.Text("N E O N // O S", 0, 0.94, 1, 1, "Sans Bold 44");
+logo = Sprite(logo_img);
+logo.SetX(cx - logo_img.GetWidth() / 2);
+logo.SetY(cy - logo_img.GetHeight() - 30);
+logo.SetZ(10);
+
+ghost_img = Image.Text("N E O N // O S", 1, 0.16, 0.43, 1, "Sans Bold 44");
+ghost = Sprite(ghost_img);
+ghost.SetX(cx - ghost_img.GetWidth() / 2 + 3);
+ghost.SetY(cy - ghost_img.GetHeight() - 30);
+ghost.SetZ(5);
+ghost.SetOpacity(0);
+
+sub_img = Image.Text("KERNEL LINUX  ·  DEBIAN TRIXIE", 1, 0.16, 0.43, 1, "Sans 11");
+sub = Sprite(sub_img);
+sub.SetX(cx - sub_img.GetWidth() / 2);
+sub.SetY(cy + 4);
+
+bar = Sprite();
+status = Sprite();
+frame = 0;
+
+fun bar_text(p) {
+  n = Math.Int(p * 32);
+  s = "";
+  for (i = 0; i < 32; i++) {
+    if (i < n) s = s + "|"; else s = s + ".";
+  }
+  return "[" + s + "]  " + Math.Int(p * 100) + "%";
+}
+
+fun progress_cb(duration, progress) {
+  img = Image.Text(bar_text(progress), 0, 0.94, 1, 1, "Sans 12");
+  bar.SetImage(img);
+  bar.SetX(cx - img.GetWidth() / 2);
+  bar.SetY(cy + 50);
+}
+Plymouth.SetBootProgressFunction(progress_cb);
+
+# fluxo de dados hexadecimal no rodapé
+hexdigits = "0123456789ABCDEF";
+hexs = Sprite();
+hexs.SetOpacity(0.35);
+fun hex_line() {
+  s = "0x";
+  for (i = 0; i < 4; i++) s = s + hexdigits.CharAt(Math.Int(Math.Random() * 16));
+  s = s + "  ";
+  for (j = 0; j < 12; j++) {
+    s = s + hexdigits.CharAt(Math.Int(Math.Random() * 16)) + hexdigits.CharAt(Math.Int(Math.Random() * 16)) + " ";
+  }
+  return s;
+}
+
+# efeito de glitch: o fantasma magenta pisca deslocado de vez em quando
+fun refresh_cb() {
+  frame++;
+  if (frame % 5 == 0) {
+    himg = Image.Text(hex_line(), 0, 0.94, 1, 1, "Sans 9");
+    hexs.SetImage(himg);
+    hexs.SetX(cx - himg.GetWidth() / 2);
+    hexs.SetY(cy + 120);
+  }
+  if (Math.Random() < 0.04) {
+    ghost.SetOpacity(0.8);
+    ghost.SetX(cx - ghost_img.GetWidth() / 2 + Math.Random() * 10 - 5);
+  } else {
+    ghost.SetOpacity(0);
+  }
+}
+Plymouth.SetRefreshFunction(refresh_cb);
+
+fun message_cb(text) {
+  img = Image.Text(text, 0.36, 0.48, 0.6, 1, "Sans 10");
+  status.SetImage(img);
+  status.SetX(cx - img.GetWidth() / 2);
+  status.SetY(Window.GetY() + Window.GetHeight() - 60);
+}
+Plymouth.SetMessageFunction(message_cb);
+
+# senha de disco criptografado (se houver)
+prompt = Sprite();
+fun password_cb(text, bullets) {
+  s = text + "  ";
+  for (i = 0; i < bullets; i++) s = s + "*";
+  img = Image.Text(s, 0, 0.94, 1, 1, "Sans 12");
+  prompt.SetImage(img);
+  prompt.SetX(cx - img.GetWidth() / 2);
+  prompt.SetY(cy + 90);
+  prompt.SetOpacity(1);
+}
+Plymouth.SetDisplayPasswordFunction(password_cb);
+fun normal_cb() { prompt.SetOpacity(0); }
+Plymouth.SetDisplayNormalFunction(normal_cb);

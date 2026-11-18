@@ -1,0 +1,16 @@
+# imagens geradas e logs de build
+iso/out/
+iso/out-build.log
+*.iso
+
+# cópia da interface gerada pelo build.sh
+iso/config/includes.chroot/opt/neonos/
+iso/config/includes.chroot/usr/local/bin/neon-browser
+iso/config/includes.chroot/usr/local/bin/neon-notify
+
+# Python / sistema
+__pycache__/
+*.pyc
+.DS_Store
+.impeccable/
+.claude/

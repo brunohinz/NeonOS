@@ -1,0 +1,56 @@
+# Sistema base live
+live-boot
+live-config
+live-config-systemd
+systemd-sysv
+dbus-user-session
+polkitd
+sudo
+locales
+console-setup
+keyboard-configuration
+
+# Shell
+bash
+bash-completion
+fastfetch
+
+# Interface: compositor Wayland leve + Firefox
+labwc
+wlrctl
+xwayland
+libgl1-mesa-dri
+firefox-esr
+firefox-esr-l10n-pt-br
+python3
+
+# Áudio, vídeo e brilho
+pipewire
+pipewire-pulse
+wireplumber
+libavcodec-extra
+brightnessctl
+
+# Tela de boot
+plymouth
+plymouth-label
+
+# Persistência e instalação no disco
+fdisk
+e2fsprogs
+calamares
+calamares-settings-debian
+
+# Fontes
+fonts-jetbrains-mono
+fonts-ipafont-gothic
+fonts-dejavu-core
+
+# Rede e hardware
+curl
+ca-certificates
+network-manager
+firmware-linux-free
+firmware-misc-nonfree
+procps
+pciutils

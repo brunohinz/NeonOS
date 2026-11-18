@@ -1,0 +1,172 @@
+#!/bin/bash
+# neon-update — atualiza a interface do NeonOS a partir do repositório no GitHub.
+#
+#   sudo neon-update                 baixa e instala a versão nova (se houver)
+#   sudo neon-update --force         reinstala mesmo que a versão seja igual
+#   neon-update --check              só mostra a versão instalada e a disponível
+#   sudo neon-update --rollback      volta para a versão anterior (backup)
+#   sudo neon-update --set-repo usuario/repositorio [branch]
+#
+# As atualizações do Debian (kernel, Firefox, programas) são feitas pelo apt.
+set -euo pipefail
+trap 'printf "\033[38;2;255;42;109m✗\033[0m falhou (linha %s): %s\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
+
+CONF=/etc/neonos/update.conf
+OPT=/opt/neonos
+BK=/var/backups/neonos
+SUMS=/usr/share/neonos/skel.sums
+KEEP=3
+REPO=""; BRANCH="main"
+[ -f "$CONF" ] && . "$CONF"
+
+say()  { printf '\033[38;2;0;240;255m▸\033[0m %s\n' "$*"; }
+ok()   { printf '\033[38;2;57;255;20m✓\033[0m %s\n' "$*"; }
+die()  { printf '\033[38;2;255;42;109m✗\033[0m %s\n' "$*" >&2; exit 1; }
+ver()  { cat "$1/VERSION" 2>/dev/null || echo 0.0.0; }
+newer() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -n1)" = "$1" ]; }  # $1 > $2 ?
+need_root() { [ "$(id -u)" = 0 ] || die "precisa de root: rode com sudo"; }
+need_repo() { [ -n "$REPO" ] || die "nenhum repositório configurado. Use: sudo neon-update --set-repo usuario/repositorio"; }
+
+install_cmds() {
+  install -m755 "$OPT/neon" /usr/local/bin/neon
+  install -m755 "$OPT/neon-notify" /usr/local/bin/neon-notify
+  install -m755 "$OPT/neon-browser.sh" /usr/local/bin/neon-browser
+  install -m755 "$OPT/neon-update" /usr/local/bin/neon-update   # install troca o arquivo sem afetar este processo
+}
+
+# Atualiza os arquivos de configuração do usuário sem apagar personalizações:
+# se o arquivo ainda é igual ao que o NeonOS instalou, troca pelo novo;
+# se o usuário mexeu nele, mantém e salva o novo ao lado como .neonos-novo
+sync_user_files() {
+  local skel="$1" oldsums="$2"
+  for home in /home/*; do
+    [ -d "$home" ] || continue
+    local owner state
+    owner=$(stat -c %U "$home")
+    id "$owner" >/dev/null 2>&1 || continue
+    state="$home/.local/state/neonos/managed"
+    mkdir -p "$(dirname "$state")"; touch "$state"
+    while IFS= read -r f; do
+      f=${f#./}
+      local new="$skel/$f" cur="$home/$f" newsum cursum oldsum
+      newsum=$(sha256sum "$new" | cut -d' ' -f1)
+      oldsum=$(awk -v p="$f" '$2==p{s=$1} END{print s}' "$state")
+      [ -n "$oldsum" ] || oldsum=$(awk -v p="$f" '$2==p{s=$1} END{print s}' "$oldsums")
+      if [ ! -e "$cur" ]; then
+        install -D -o "$owner" -g "$owner" -m "$(stat -c %a "$new")" "$new" "$cur"
+        say "  $owner: novo $f"
+      else
+        cursum=$(sha256sum "$cur" | cut -d' ' -f1)
+        if [ "$cursum" = "$newsum" ]; then :
+        elif [ -n "$oldsum" ] && [ "$cursum" = "$oldsum" ]; then
+          install -o "$owner" -g "$owner" -m "$(stat -c %a "$new")" "$new" "$cur"
+          say "  $owner: atualizado $f"
+        else
+          install -o "$owner" -g "$owner" -m 644 "$new" "$cur.neonos-novo"
+          say "  $owner: mantive o seu $f (a versão nova ficou em $f.neonos-novo)"
+        fi
+      fi
+      awk -v p="$f" '$2!=p' "$state" > "$state.tmp" || true
+      echo "$newsum $f" >> "$state.tmp"; mv "$state.tmp" "$state"
+    done < <(cd "$skel" && find . -type f)
+    chown -R "$owner:$owner" "$home/.local/state/neonos"
+  done
+}
+
+apply() {
+  need_root; need_repo
+  local tmp src old new inc
+  tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+  say "baixando $REPO ($BRANCH)…"
+  if [ -n "${NEON_UPDATE_TGZ:-}" ]; then cp "$NEON_UPDATE_TGZ" "$tmp/src.tgz"   # testes: usa um pacote local
+  else curl -fsSL --retry 2 "https://codeload.github.com/$REPO/tar.gz/refs/heads/$BRANCH" -o "$tmp/src.tgz" || die "não consegui baixar do GitHub (o repositório é público?)"; fi
+  tar -xzf "$tmp/src.tgz" -C "$tmp"
+  src=$(find "$tmp" -mindepth 1 -maxdepth 1 -type d | head -n1)
+  [ -f "$src/neonos/index.html" ] && [ -f "$src/neonos/server.py" ] || die "esse repositório não parece ser do NeonOS"
+  python3 -m py_compile "$src/neonos/server.py" || die "a versão nova tem um erro no server.py; nada foi alterado"
+  rm -rf "$src/neonos/__pycache__"
+
+  old=$(ver "$OPT"); new=$(ver "$src/neonos")
+  if ! newer "$new" "$old" && [ "${FORCE:-0}" != 1 ]; then ok "já está na versão mais nova ($old)"; exit 0; fi
+  say "versão $old → $new"
+
+  say "guardando backup da versão $old…"
+  mkdir -p "$BK"
+  cp -a "$OPT" "$BK/$old-$(date +%Y%m%d-%H%M%S)"
+  ls -1dt "$BK"/*/ 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm -rf
+
+  say "instalando a interface…"
+  [ -d "$src/neonos/vendor" ] || cp -a "$OPT/vendor" "$src/neonos/" 2>/dev/null || true
+  rm -rf "$OPT.new"; cp -a "$src/neonos" "$OPT.new"
+  rm -rf "$OPT"; mv "$OPT.new" "$OPT"
+  chmod +x "$OPT"/*.sh "$OPT/neon" "$OPT/neon-notify" "$OPT/neon-update" 2>/dev/null || true
+  install_cmds
+
+  inc="$src/iso/config/includes.chroot"
+  if [ -d "$inc/usr/share/neonos" ]; then mkdir -p /usr/share/neonos; cp -a "$inc/usr/share/neonos/." /usr/share/neonos/; fi
+  if [ -d "$inc/usr/share/plymouth/themes/neonos" ] && ! diff -rq "$inc/usr/share/plymouth/themes/neonos" /usr/share/plymouth/themes/neonos >/dev/null 2>&1; then
+    say "atualizando a tela de boot…"
+    mkdir -p /usr/share/plymouth/themes/neonos
+    cp -a "$inc/usr/share/plymouth/themes/neonos/." /usr/share/plymouth/themes/neonos/
+    update-initramfs -u >/dev/null 2>&1 || true
+  fi
+  if [ -d "$inc/etc/skel" ]; then
+    say "atualizando configurações do usuário…"
+    cp "$SUMS" "$tmp/old.sums" 2>/dev/null || : > "$tmp/old.sums"
+    cp -a "$inc/etc/skel/." /etc/skel/
+    sync_user_files "$inc/etc/skel" "$tmp/old.sums"
+    (cd /etc/skel && find . -type f -exec sha256sum {} \;) | sed 's#  \./# #' > "$SUMS"
+  fi
+
+  # programas novos que a versão nova precisa (ignora os do modo live e o instalador)
+  local list="$src/iso/config/package-lists/neonos.list.chroot" missing=""
+  if [ -f "$list" ]; then
+    for p in $(grep -vE '^\s*(#|$)' "$list" | grep -vE '^(live-|calamares)'); do
+      dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q '^install ok installed' || missing="$missing $p"
+    done
+    if [ -n "$missing" ]; then
+      say "instalando programas novos:$missing"
+      DEBIAN_FRONTEND=noninteractive apt-get install -y $missing || say "alguns programas não puderam ser instalados"
+    fi
+  fi
+  ok "NeonOS atualizado para a versão $new"
+}
+
+rollback() {
+  need_root
+  local last
+  last=$(ls -1dt "$BK"/*/ 2>/dev/null | head -n1 || true)
+  [ -n "$last" ] || die "não há backup para voltar"
+  say "voltando para $(basename "$last")…"
+  rm -rf "$OPT.new"; cp -a "$last" "$OPT.new"
+  rm -rf "$OPT"; mv "$OPT.new" "$OPT"
+  rm -rf "$last"
+  install_cmds
+  ok "NeonOS voltou para a versão $(ver "$OPT")"
+}
+
+check() {
+  echo "instalada:   $(ver "$OPT")"
+  [ -n "$REPO" ] || { echo "repositório: (não configurado)"; return; }
+  echo "repositório: $REPO ($BRANCH)"
+  echo "disponível:  $(curl -fsSL "https://raw.githubusercontent.com/$REPO/$BRANCH/neonos/VERSION" 2>/dev/null || echo '(não consegui verificar)')"
+}
+
+set_repo() {
+  need_root
+  [[ "${1:-}" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || die "formato: usuario/repositorio"
+  [[ "${2:-main}" =~ ^[A-Za-z0-9_./-]+$ ]] || die "nome de branch inválido"
+  mkdir -p /etc/neonos
+  printf '# configurado pelo neon-update\nREPO="%s"\nBRANCH="%s"\n' "$1" "${2:-main}" > "$CONF"
+  ok "repositório: $1 (${2:-main})"
+}
+
+case "${1:-}" in
+  ""|--apply) apply ;;
+  --force)    FORCE=1 apply ;;
+  --check)    check ;;
+  --rollback) rollback ;;
+  --set-repo) set_repo "${2:-}" "${3:-main}" ;;
+  -h|--help)  sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *)          die "opção desconhecida: $1 (veja neon-update --help)" ;;
+esac

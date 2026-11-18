@@ -1,0 +1,16 @@
+#!/bin/sh
+# NeonOS — base Debian 13 "trixie" (a mesma base do LMDE 7) com o kernel Linux do Debian
+set -e
+lb config noauto \
+  --mode debian \
+  --distribution trixie \
+  --architectures amd64 \
+  --linux-flavours amd64 \
+  --archive-areas "main contrib non-free non-free-firmware" \
+  --debian-installer none \
+  --binary-images iso-hybrid \
+  --memtest none \
+  --iso-application "NeonOS" \
+  --iso-volume "NEONOS" \
+  --bootappend-live "boot=live components persistence quiet splash loglevel=3 vt.global_cursor_default=0 hostname=neon username=ghost user-fullname=Ghost locales=pt_BR.UTF-8 keyboard-layouts=br timezone=America/Sao_Paulo" \
+  "${@}"

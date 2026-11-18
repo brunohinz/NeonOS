@@ -1,0 +1,19 @@
+// Perfil do Firefox que exibe a interface NeonOS (sem barras, sem avisos)
+user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
+user_pref("browser.startup.homepage", "http://localhost:8080/");
+user_pref("browser.startup.page", 1);
+user_pref("browser.shell.checkDefaultBrowser", false);
+user_pref("browser.startup.homepage_override.mstone", "ignore");
+user_pref("browser.aboutwelcome.enabled", false);
+user_pref("browser.sessionstore.resume_from_crash", false);
+user_pref("browser.tabs.warnOnClose", false);
+user_pref("browser.tabs.inTitlebar", 0);
+user_pref("browser.fullscreen.autohide", false);
+user_pref("ui.key.menuAccessKeyFocuses", false);
+user_pref("ui.systemUsesDarkTheme", 1);
+user_pref("media.autoplay.default", 0);
+user_pref("media.autoplay.blocking_policy", 0);
+user_pref("datareporting.policy.dataSubmissionEnabled", false);
+user_pref("toolkit.telemetry.enabled", false);
+user_pref("browser.translations.automaticallyPopup", false);
+user_pref("dom.disable_beforeunload", true);

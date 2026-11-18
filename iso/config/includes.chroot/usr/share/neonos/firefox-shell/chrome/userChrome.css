@@ -1,0 +1,8 @@
+/* esconde toda a interface do Firefox: só a página do NeonOS aparece */
+#navigator-toolbox, #titlebar, #TabsToolbar, #nav-bar, #PersonalToolbar,
+#sidebar-box, #sidebar-splitter, #statuspanel, #fullscr-toggler,
+.browserStack > findbar, #notifications-toolbar {
+  visibility: collapse !important;
+}
+#navigator-toolbox { min-height: 0 !important; max-height: 0 !important; overflow: hidden !important; border: 0 !important; }
+:root { background: #05060a !important; }

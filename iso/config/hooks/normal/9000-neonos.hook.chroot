@@ -1,0 +1,32 @@
+#!/bin/sh
+# Ajustes finais do NeonOS dentro do sistema (roda durante a montagem da ISO)
+set -e
+
+chmod +x /usr/local/bin/neon /usr/local/bin/neon-update /usr/local/bin/neon-browser /usr/local/bin/neon-notify /opt/neonos/*.sh /opt/neonos/neon /opt/neonos/neon-update /opt/neonos/neon-notify || true
+chmod +x /etc/skel/.config/labwc/neonos-start.sh || true
+
+# tela de boot
+plymouth-set-default-theme neonos
+update-initramfs -u -k all
+
+# terminal de texto (Ctrl+Alt+F2): logo ASCII antes do login
+cat > /etc/issue <<'EOF'
+
+ ███╗   ██╗███████╗ ██████╗ ███╗   ██╗ ██████╗ ███████╗
+ ████╗  ██║██╔════╝██╔═══██╗████╗  ██║██╔═══██╗██╔════╝
+ ██╔██╗ ██║█████╗  ██║   ██║██╔██╗ ██║██║   ██║███████╗
+ ██║╚██╗██║██╔══╝  ██║   ██║██║╚██╗██║██║   ██║╚════██║
+ ██║ ╚████║███████╗╚██████╔╝██║ ╚████║╚██████╔╝███████║
+ ╚═╝  ╚═══╝╚══════╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
+
+ NeonOS · Debian trixie · kernel \r · terminal \l
+
+EOF
+cat > /etc/motd <<'EOF'
+
+ ▲ NEON//OS ─ conectado. digite "neon" para animações ASCII, "neofetch" para o sistema.
+
+EOF
+
+# impressão digital das configurações originais do usuário (o neon-update usa para não apagar personalizações)
+(cd /etc/skel && find . -type f -exec sha256sum {} \;) | sed 's#  \./# #' > /usr/share/neonos/skel.sums

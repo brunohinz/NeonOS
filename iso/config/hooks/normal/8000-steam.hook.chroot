@@ -1,0 +1,11 @@
+#!/bin/sh
+# Steam pré-instalada: precisa da arquitetura i386 (bibliotecas de 32 bits) e dos drivers de vídeo 32 bits.
+# O acordo de assinante da Valve é aceito pelo próprio usuário, dentro da Steam, ao entrar na conta.
+set -e
+dpkg --add-architecture i386
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+  steam-installer steam-devices \
+  mesa-vulkan-drivers mesa-vulkan-drivers:i386 \
+  libgl1-mesa-dri:i386 libglx-mesa0:i386 libegl-mesa0:i386
+apt-get clean

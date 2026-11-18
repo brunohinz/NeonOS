@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<labwc_config>
+  <core>
+    <decoration>server</decoration>
+    <gap>0</gap>
+  </core>
+
+  <theme>
+    <name>Neon</name>
+    <cornerRadius>0</cornerRadius>
+    <font place="ActiveWindow"><name>JetBrains Mono</name><size>10</size></font>
+    <font place="InactiveWindow"><name>JetBrains Mono</name><size>10</size></font>
+    <font place="MenuItem"><name>JetBrains Mono</name><size>10</size></font>
+    <font place="OnScreenDisplay"><name>JetBrains Mono</name><size>11</size></font>
+  </theme>
+
+  <keyboard>
+    <default />
+    <!-- Super+Espaço: volta para a interface NeonOS -->
+    <keybind key="W-space">
+      <action name="Execute" command="wlrctl toplevel focus app_id:neonos-shell" />
+    </keybind>
+    <!-- Super+B: navegador -->
+    <keybind key="W-b">
+      <action name="Execute" command="neon-browser" />
+    </keybind>
+    <!-- Super+Q: fecha a janela atual (exceto a interface, que reabre sozinha) -->
+    <keybind key="W-q">
+      <action name="Close" />
+    </keybind>
+  </keyboard>
+
+  <windowRules>
+    <!-- a interface ocupa a tela toda, sem bordas -->
+    <windowRule identifier="neonos-shell" serverDecoration="no" skipTaskbar="yes">
+      <action name="Maximize" />
+    </windowRule>
+    <windowRule identifier="neonos-browser">
+      <action name="Maximize" />
+    </windowRule>
+  </windowRules>
+</labwc_config>

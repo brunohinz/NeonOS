@@ -1,0 +1,2 @@
+# executado pelo labwc ao iniciar
+bash "$HOME/.config/labwc/neonos-start.sh" >/tmp/neonos-start.log 2>&1 &

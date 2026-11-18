@@ -1,0 +1,26 @@
+# Tema Neon para as bordas de janelas do labwc (programas fora da interface)
+border.width: 1
+padding.height: 4
+titlebar.height: 24
+
+window.active.border.color: #00f0ff
+window.inactive.border.color: #1b2a3a
+window.active.title.bg.color: #0a0c16
+window.inactive.title.bg.color: #05060a
+window.active.label.text.color: #00f0ff
+window.inactive.label.text.color: #5d7a99
+window.label.text.justify: left
+window.active.button.unpressed.image.color: #ff2a6d
+window.inactive.button.unpressed.image.color: #5d7a99
+
+menu.border.color: #ff2a6d
+menu.items.bg.color: #0a0c16
+menu.items.text.color: #cfe9ff
+menu.items.active.bg.color: #00f0ff
+menu.items.active.text.color: #000000
+menu.separator.color: #1b2a3a
+
+osd.bg.color: #0a0c16
+osd.border.color: #ff2a6d
+osd.border.width: 1
+osd.label.text.color: #00f0ff
