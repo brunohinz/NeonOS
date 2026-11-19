@@ -788,6 +788,8 @@ APPS.settings = { name: 'Config', icon: '⚙', kw: 'configuracoes ajustes prefer
         <p class="c-d">Em "Estender", cada monitor tem o seu papel de parede, as janelas podem ser arrastadas entre eles, e maximizar ocupa só o monitor da janela. A barra de tarefas fica no monitor principal.</p></div>`;
       DISP = await api('/api/displays').catch(() => ({ available: false }));
       displayPanel($('.dm-body', sec));
+      sec.insertAdjacentHTML('afterbegin', '<div><h5>POSIÇÃO DOS MONITORES (ESTENDER)</h5><div class="arr-body"></div></div>');
+      arrangePanel($('.arr-body', sec));
     },
     sound() {
       sec.innerHTML = `<div><h5>SONS DA INTERFACE</h5><label class="row"><input type="checkbox" class="sf" ${SETTINGS.sound ? 'checked' : ''}> Bipes ao abrir/fechar janelas, notificações e inicialização</label>

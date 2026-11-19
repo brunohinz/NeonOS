@@ -61,6 +61,8 @@ Vem pré-instalada (`steam-installer` + bibliotecas de 32 bits). Na primeira abe
 - No modo Estender, a janela da interface cobre todos os monitores: o `neon-display shell-rule` reescreve a regra `neonos-shell` do `rc.xml` com o tamanho total. A página recebe o layout por `/api/displays` e desenha um papel de parede por monitor. A barra de tarefas e os ícones ficam no monitor principal, e maximizar ocupa só o monitor da janela.
 - Super+P (atalho do labwc) abre o menu. Também está em Config → Monitores.
 
+
+Em Config → Monitores dá para arrumar a posição física no "Estender" (qual monitor fica à esquerda/direita ou em cima/embaixo, e o alinhamento), para o mouse passar de um para o outro pelo lado certo. Fica salvo em `~/.config/neonos/display.json` (`neon-display arrange A,B row|column top|center|bottom`).
 ## Cursor
 
 O tema **Neon** (`/usr/share/icons/Neon`) é gerado por `iso/cursor/make-cursors.py`, que usa python3-pil e xcursorgen. As cópias em PNG ficam em `neonos/cursors/` e são usadas pela interface.

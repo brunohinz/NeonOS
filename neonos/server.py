@@ -844,6 +844,19 @@ def display_primary(b):
     return {"ok": True}
 
 
+def display_arrange(b):
+    order = [str(x) for x in (b.get("order") or [])]
+    if not order or not all(re.fullmatch(r"[\w.-]{1,40}", n) for n in order):
+        raise ValueError("ordem de monitores inválida")
+    arr = b.get("arrange", "row") if b.get("arrange") in ("row", "column") else "row"
+    align = b.get("align", "top") if b.get("align") in ("top", "center", "bottom") else "top"
+    code, out = run([sys.executable, NEON_DISPLAY, "arrange", ",".join(order), arr, align], 20)
+    if code != 0:
+        raise ValueError(out.strip()[-200:] or "falha")
+    restart_shell()
+    return {"ok": True}
+
+
 def ui_event(b):
     t = str(b.get("type", ""))
     if t == "shell":                      # Super+Espaço
@@ -2190,6 +2203,7 @@ POST = {
     "/api/neon/restart": restart_self,
     "/api/displays/mode": display_mode,
     "/api/displays/primary": display_primary,
+    "/api/displays/arrange": display_arrange,
     "/api/ui": ui_event,
     "/api/wm": wm_action,
     "/api/wm/shell": lambda b: {"ok": WM.raise_shell(bool(b.get("temp")))},

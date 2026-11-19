@@ -526,3 +526,16 @@ body[data-fx="off"] #lockFx{display:none}
 .tools{display:flex;flex-wrap:wrap;gap:6px}
 .dfl-grid{display:grid;gap:2px}
 .dfl-grid .row{cursor:default}
+
+/* ---------- posição dos monitores ---------- */
+.arr-stage{display:flex;gap:4px;padding:14px;border:1px dashed var(--line);background:rgba(0,0,0,.3);justify-content:center;overflow:auto}
+.arr-stage.row.al-top{align-items:flex-start}.arr-stage.row.al-center{align-items:center}.arr-stage.row.al-bottom{align-items:flex-end}
+.arr-stage.col{flex-direction:column}
+.arr-stage.col.al-top{align-items:flex-start}.arr-stage.col.al-center{align-items:center}.arr-stage.col.al-bottom{align-items:flex-end}
+.arr-mon{position:relative;flex-shrink:0;border:1px solid var(--line);background:rgba(0,240,255,.05);display:grid;align-content:start;justify-items:center;gap:1px;padding:6px 4px 26px;overflow:hidden;text-align:center}
+.arr-mon.prim{border-color:var(--accent);box-shadow:0 0 14px rgba(0,240,255,.25)}
+.arr-mon b{font-size:22px;color:var(--accent);text-shadow:0 0 10px var(--accent);line-height:1}
+.arr-mon small{font-size:9.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arr-btns{position:absolute;bottom:3px;left:0;right:0;display:flex;justify-content:center;gap:4px}
+.arr-opts{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+.arr-opts .fx-pick{grid-template-columns:repeat(2,auto)}

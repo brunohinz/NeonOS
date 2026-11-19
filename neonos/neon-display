@@ -4,6 +4,9 @@
   neon-display list            monitores e layout atual (JSON)
   neon-display mode MODO       pc | duplicate | extend | second
   neon-display primary NOME    escolhe o monitor principal (barra de tarefas e ícones)
+  neon-display arrange A,B [row|column] [top|center|bottom]
+                               posição física no "estender": A,B da esquerda para a direita
+                               (row) ou de cima para baixo (column), e o alinhamento
   neon-display apply           reaplica o modo salvo (usado no login)
   neon-display shell-rule      recria o rc.xml: interface em todos os monitores + espaço da barra
 """
@@ -88,7 +91,12 @@ def layout():
         x0, y0 = min(m["x"] for m in mons), min(m["y"] for m in mons)
         x1, y1 = max(m["x"] + m["w"] for m in mons), max(m["y"] + m["h"] for m in mons)
         bbox = {"x": x0, "y": y0, "w": x1 - x0, "h": y1 - y0}
+    outs_info = [{"name": o["name"], "label": " ".join(x for x in (o.get("make"), o.get("model")) if x and x != "Unknown") or o["name"],
+                  "w": logical_size(o)[0], "h": logical_size(o)[1]} for o in outs]
+    order = [n for n in st.get("order") or [] if n in {o["name"] for o in outs}]
+    order += [o["name"] for o in sorted(outs, key=lambda o: (o["name"] != prim, internal_first(outs).index(o))) if o["name"] not in order]
     return {"mode": st.get("mode", "extend"), "primary": prim, "connected": [o["name"] for o in outs],
+            "outputs": outs_info, "order": order, "arrange": st.get("arrange", "row"), "align": st.get("align", "top"),
             "monitors": mons, "bbox": bbox}
 
 
@@ -119,11 +127,19 @@ def set_mode(mode):
         on(others[0], 0, 0); off(p); [off(o) for o in others[1:]]
     elif mode == "duplicate":
         on(p, 0, 0); [on(o, 0, 0) for o in others]
-    else:  # extend: principal à esquerda, os outros em sequência à direita
-        x = 0
-        for o in [p, *others]:
-            on(o, x, 0)
-            x += logical_size(o)[0]
+    else:  # extend: na ordem que o usuário arrumou (padrão: principal à esquerda)
+        order = st.get("order") or []
+        seq = sorted([p, *others], key=lambda o: order.index(o["name"]) if o["name"] in order else len(order))
+        sizes = [logical_size(o) for o in seq]
+        column = st.get("arrange") == "column"
+        align = st.get("align", "top")
+        span = max(h for w, h in sizes) if not column else max(w for w, h in sizes)
+        pos = 0
+        for o, (w, h) in zip(seq, sizes):
+            own = h if not column else w
+            off_ = 0 if align == "top" else (span - own) // 2 if align == "center" else span - own
+            on(o, pos, off_) if not column else on(o, off_, pos)
+            pos += w if not column else h
     r = randr(*args)
     if r.returncode != 0:
         raise SystemExit("wlr-randr falhou: " + r.stderr.strip())
@@ -200,6 +216,14 @@ def main():
     elif cmd == "primary":
         st = load_state(); st["primary"] = sys.argv[2]; save_state(st)
         set_mode(st.get("mode", "extend"))
+    elif cmd == "arrange":
+        names = [n for n in (sys.argv[2] if len(sys.argv) > 2 else "").split(",") if n]
+        arr = sys.argv[3] if len(sys.argv) > 3 else "row"
+        align = sys.argv[4] if len(sys.argv) > 4 else "top"
+        if not names or arr not in ("row", "column") or align not in ("top", "center", "bottom"):
+            raise SystemExit("uso: neon-display arrange A,B [row|column] [top|center|bottom]")
+        st = load_state(); st.update(order=names, arrange=arr, align=align); save_state(st)
+        print(set_mode("extend"))
     elif cmd == "apply":
         try:
             set_mode(load_state().get("mode", "extend"))

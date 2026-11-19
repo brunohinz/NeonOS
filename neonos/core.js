@@ -838,7 +838,8 @@ function setupMonitors(d) {
   Wall.monitors = mons; Wall.dirty = true;
   $$('.mon-label').forEach(e => e.remove());
   mons.filter(m => m !== PRIMARY).forEach((m, i) => {
-    const l = el('div', 'mon-label', `<pre class="awave" data-w="20"></pre><b>TELA ${i + 2}</b><small>${esc(m.label)}</small><pre class="mon-clock"></pre>`);
+    const num = DISP && DISP.order ? DISP.order.indexOf(m.name) + 1 || i + 2 : i + 2;
+    const l = el('div', 'mon-label', `<pre class="awave" data-w="20"></pre><b>TELA ${num}</b><small>${esc(m.label)}</small><pre class="mon-clock"></pre>`);
     l.style.left = m.x + m.w - 290 + 'px'; l.style.top = m.y + 26 + 'px';
     document.body.appendChild(l);
   });
@@ -881,6 +882,37 @@ function displayPanel(box, onDone) {
   };
   mark();
   return { next: () => { sel = (sel + 1) % cards.length; mark(); }, prev: () => { sel = (sel + cards.length - 1) % cards.length; mark(); }, apply: () => go(sel) };
+}
+/* posição física dos monitores no "estender" (Config → Monitores) */
+function arrangePanel(box) {
+  const d = DISP || {};
+  const outs = d.outputs || [];
+  if (!d.available || outs.length < 2) { box.innerHTML = '<p class="c-d">Conecte dois ou mais monitores para arrumar a posição deles.</p>'; return; }
+  let order = [...(d.order || outs.map(o => o.name))], arrange = d.arrange || 'row', align = d.align || 'top';
+  const info = n => outs.find(o => o.name === n) || { name: n, label: n, w: 1920, h: 1080 };
+  const draw = () => {
+    const col = arrange === 'column', big = Math.max(...order.map(n => col ? info(n).h : info(n).w)) || 1;
+    const scale = (col ? 130 : 230) / big;
+    box.innerHTML = `<div class="arr-stage ${col ? 'col' : 'row'} al-${align}">${order.map((n, i) => {
+      const o = info(n), prim = n === d.primary;
+      return `<div class="arr-mon${prim ? ' prim' : ''}" style="width:${Math.round(o.w * scale)}px;height:${Math.round(o.h * scale)}px">
+        <b>${i + 1}</b><small>${esc(o.label)}</small><small class="c-d">${esc(n)}${prim ? ' · principal' : ''}</small>
+        <span class="arr-btns">${i > 0 ? `<button class="mini mv" data-i="${i}" data-d="-1" title="Mover para ${col ? 'cima' : 'a esquerda'}">${col ? '↑' : '←'}</button>` : ''}${i < order.length - 1 ? `<button class="mini mv" data-i="${i}" data-d="1" title="Mover para ${col ? 'baixo' : 'a direita'}">${col ? '↓' : '→'}</button>` : ''}</span></div>`;
+    }).join('')}</div>
+    <div class="arr-opts"><div class="fx-pick"><button data-a="row" class="${col ? '' : 'on'}">Lado a lado</button><button data-a="column" class="${col ? 'on' : ''}">Um em cima do outro</button></div>
+      <label class="row">Alinhar: <select class="field al" style="width:auto">${(col ? [['top', 'pela esquerda'], ['center', 'pelo meio'], ['bottom', 'pela direita']] : [['top', 'pelo topo'], ['center', 'pelo meio'], ['bottom', 'pela base']]).map(([v, l]) => `<option value="${v}" ${v === align ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <button class="btn hot ap">Aplicar</button></div>
+    <p class="c-d" style="font-size:11px">Arrume igual à sua mesa: o mouse passa de um monitor para o outro pelo lado em que eles se encostam. Os números também aparecem no canto de cada tela.</p>`;
+    $$('.mv', box).forEach(b => b.onclick = () => { const i = +b.dataset.i, j = i + +b.dataset.d; [order[i], order[j]] = [order[j], order[i]]; draw(); });
+    $$('[data-a]', box).forEach(b => b.onclick = () => { arrange = b.dataset.a; draw(); });
+    $('.al', box).onchange = e => { align = e.target.value; draw(); };
+    $('.ap', box).onclick = async () => {
+      toast('Ajustando monitores', 'A interface vai reabrir em instantes');
+      const r = await api('/api/displays/arrange', { order, arrange, align }).catch(e => ({ error: e.message }));
+      if (r.error) toast('Monitores', r.error, 'err');
+    };
+  };
+  draw();
 }
 async function showDisplayMenu() {
   const open = $('.dmenu');
