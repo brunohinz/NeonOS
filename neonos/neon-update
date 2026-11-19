@@ -148,6 +148,8 @@ apply() {
   if command -v flatpak >/dev/null; then
     flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1 || true
   fi
+  say "gravando tudo no disco…"
+  sync   # sem isso, desligar logo depois pode deixar os arquivos novos vazios
   ok "NeonOS atualizado para a versão $new"
 }
 
@@ -161,6 +163,7 @@ rollback() {
   rm -rf "$OPT"; mv "$OPT.new" "$OPT"
   rm -rf "$last"
   install_cmds
+  sync
   ok "NeonOS voltou para a versão $(ver "$OPT")"
 }
 
