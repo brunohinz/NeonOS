@@ -12,7 +12,12 @@ for a in /usr/libexec/polkit-mate-authentication-agent-1 /usr/lib/x86_64-linux-g
   [ -x "$a" ] && { "$a" >/dev/null 2>&1 & break; }
 done
 
-python3 /opt/neonos/server.py >/tmp/neonos-server.log 2>&1 &
+# backend: se cair por qualquer motivo, sobe de novo (o log fica em /tmp/neonos-server.log)
+(while true; do
+  python3 -u /opt/neonos/server.py >>/tmp/neonos-server.log 2>&1
+  echo "--- backend saiu ($?), reiniciando" >>/tmp/neonos-server.log
+  sleep 2
+done) &
 
 # monitores: reaplica o último modo escolhido no Super+P (padrão: estender)
 /opt/neonos/neon-display apply >/tmp/neonos-display.log 2>&1 || true
@@ -32,6 +37,9 @@ fi
 # se o Firefox da interface fechar (ou os monitores mudarem), abre de novo no tamanho certo
 while true; do
   /opt/neonos/neon-display shell-rule >>/tmp/neonos-display.log 2>&1 || true
-  firefox-esr --no-remote --name neonos-shell --profile "$prof" http://localhost:8080/
+  # página de espera local: só carrega a interface quando o backend responder
+  start_url=http://localhost:8080/
+  [ -f /opt/neonos/wait.html ] && start_url=file:///opt/neonos/wait.html
+  firefox-esr --no-remote --name neonos-shell --profile "$prof" "$start_url"
   sleep 1
 done

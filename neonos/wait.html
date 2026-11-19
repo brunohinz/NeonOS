@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>NeonOS</title>
+<!-- Aberta direto do disco pelo Firefox da interface: espera o backend do NeonOS
+     responder e só então carrega http://localhost:8080 (nunca fica na tela de erro). -->
+<style>
+  html,body{margin:0;height:100%;background:#05060a;color:#cfe9ff;font:13px/1.6 "JetBrains Mono",monospace;overflow:hidden;cursor:none}
+  body{display:grid;place-items:center}
+  .b{text-align:center}
+  h1{margin:0 0 6px;font-weight:400;letter-spacing:10px;color:#00f0ff;text-shadow:0 0 14px #00f0ff,2px 0 #ff2a6d}
+  pre{margin:14px 0 0;color:#00f0ff}
+  small{color:#5d7a99}
+  .h{color:#ff2a6d}
+</style>
+</head>
+<body>
+<div class="b">
+  <h1>NEON//OS</h1>
+  <small>iniciando o sistema<span id="d"></span></small>
+  <pre id="bar"></pre>
+  <small id="msg"></small>
+</div>
+<script>
+  let n = 0;
+  const bar = document.getElementById('bar'), msg = document.getElementById('msg');
+  function tick() {
+    n++;
+    const k = n % 24;
+    bar.textContent = '[' + '░'.repeat(24).split('').map((c, i) => (i === k || i === (k + 23) % 24) ? '█' : c).join('') + ']';
+    document.getElementById('d').textContent = '.'.repeat(n % 4);
+    if (n > 60) msg.innerHTML = '<br>demorando mais que o normal… <span class="h">Ctrl+Alt+F2</span> abre um terminal';
+  }
+  function probe() {
+    const img = new Image();
+    img.onload = () => location.replace('http://localhost:8080/');
+    img.onerror = () => setTimeout(probe, 700);
+    img.src = 'http://127.0.0.1:8080/cursors/arrow.png?t=' + Date.now();
+  }
+  setInterval(tick, 120); tick(); probe();
+</script>
+</body>
+</html>

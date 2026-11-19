@@ -2352,6 +2352,16 @@ def background_start():
 
 
 if __name__ == "__main__":
-    print(f"NeonOS em http://127.0.0.1:{PORT}")
-    background_start()
-    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    # abre a porta primeiro: a interface já conecta enquanto o resto inicia
+    httpd = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    httpd.daemon_threads = True
+    print(f"NeonOS em http://127.0.0.1:{PORT}", flush=True)
+
+    def _bg():
+        try:
+            background_start()
+        except Exception:
+            import traceback
+            traceback.print_exc()
+    threading.Thread(target=_bg, daemon=True).start()
+    httpd.serve_forever()
