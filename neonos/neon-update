@@ -140,7 +140,12 @@ apply() {
       apt-get update || true
       DEBIAN_FRONTEND=noninteractive apt-get install -y $missing || {
         say "instalando um por um os que deram problema…"
-        for p in $missing; do DEBIAN_FRONTEND=noninteractive apt-get install -y "$p" >/dev/null 2>&1 || say "  não foi possível instalar: $p"; done
+        n=0; total=$(echo $missing | wc -w)
+        for p in $missing; do
+          n=$((n + 1)); printf '  [%s/%s] %s… ' "$n" "$total" "$p"
+          if DEBIAN_FRONTEND=noninteractive apt-get install -y -q "$p" >/tmp/neon-update-apt.log 2>&1; then echo ok
+          else echo "não disponível (pulei)"; fi
+        done
       }
     fi
   fi
