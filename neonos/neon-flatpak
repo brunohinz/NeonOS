@@ -1,0 +1,25 @@
+#!/bin/bash
+# neon-flatpak — instala um app Flatpak (.flatpak, .flatpakref ou um ID do Flathub)
+#   neon-flatpak arquivo.flatpak
+#   neon-flatpak com.exemplo.App
+# Instala para o seu usuário (não precisa de senha) e o app aparece em Programas.
+set -uo pipefail
+say() { printf '\033[38;2;0;240;255m▸\033[0m %s\n' "$*"; }
+ok()  { printf '\033[38;2;57;255;20m✓\033[0m %s\n' "$*"; }
+die() { printf '\033[38;2;255;42;109m✗\033[0m %s\n' "$*" >&2; read -rp "Enter para fechar" _; exit 1; }
+
+[ -n "${1:-}" ] || die "uso: neon-flatpak arquivo.flatpak | id.do.app"
+command -v flatpak >/dev/null || die "o Flatpak não está instalado. Rode: sudo apt install flatpak  (ou atualize o NeonOS)"
+
+say "preparando o Flathub (de onde vêm as bibliotecas dos apps)…"
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || die "não consegui acessar o Flathub (sem internet?)"
+
+case "$1" in
+  *.flatpak)    say "instalando $(basename "$1")…"; flatpak install --user -y --bundle "$1" ;;
+  *.flatpakref) say "instalando $(basename "$1")…"; flatpak install --user -y --from "$1" ;;
+  *)            say "instalando $1 do Flathub…";    flatpak install --user -y flathub "$1" ;;
+esac || die "a instalação falhou (veja a mensagem acima)"
+
+neon-notify "Flatpak" "App instalado — procure em Programas" ok >/dev/null 2>&1 || true
+ok "pronto! O app já aparece em ▲ NEON → Programas"
+read -rp "Enter para fechar" _

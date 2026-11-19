@@ -14,7 +14,8 @@ const parentP = p => p.replace(/\/[^/]+\/?$/, '') || '/';
 const baseP = p => p.split('/').filter(Boolean).pop() || '/';
 const rawURL = p => '/api/fs/raw?' + qs({ path: p });
 function openPath(path) {
-  if (MEDIA_RE.test(path)) openApp('player', path);
+  if (/\.flatpak(ref)?$/i.test(path)) openApp('terminal', { cmd: 'neon-flatpak ' + "'" + path.replace(/'/g, "'\\''") + "'" });
+  else if (MEDIA_RE.test(path)) openApp('player', path);
   else if (IMG_RE.test(path)) openApp('viewer', path);
   else openApp('editor', path);
 }

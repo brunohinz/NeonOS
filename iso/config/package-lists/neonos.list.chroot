@@ -55,3 +55,4 @@ firmware-linux-free
 firmware-misc-nonfree
 procps
 pciutils
+flatpak

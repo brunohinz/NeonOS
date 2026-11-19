@@ -582,7 +582,8 @@ def parse_desktop(path):
 
 def desktop_entries():
     apps = {}
-    for d in ("/usr/share/applications", "/usr/local/share/applications", os.path.join(HOME, ".local/share/applications")):
+    for d in ("/usr/share/applications", "/usr/local/share/applications", "/var/lib/flatpak/exports/share/applications",
+              os.path.join(HOME, ".local/share/flatpak/exports/share/applications"), os.path.join(HOME, ".local/share/applications")):
         for f in glob.glob(d + "/*.desktop"):
             e = safe(lambda: parse_desktop(f))
             if e:
@@ -599,7 +600,7 @@ def app_command(app_id):
     a = next((x for x in desktop_entries() if x["id"] == app_id), None)
     if not a:
         raise ValueError("programa não encontrado")
-    return a, [t for t in shlex.split(a["exec"]) if not re.fullmatch(r"%[a-zA-Z]", t)]
+    return a, [t for t in shlex.split(a["exec"]) if not re.fullmatch(r"%[a-zA-Z]|@@[a-z]?", t)]
 
 
 def app_launch(b):

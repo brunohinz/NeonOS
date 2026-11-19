@@ -31,6 +31,7 @@ install_cmds() {
   install -m755 "$OPT/neon" /usr/local/bin/neon
   install -m755 "$OPT/neon-notify" /usr/local/bin/neon-notify
   install -m755 "$OPT/neon-browser.sh" /usr/local/bin/neon-browser
+  [ -f "$OPT/neon-flatpak" ] && install -m755 "$OPT/neon-flatpak" /usr/local/bin/neon-flatpak
   [ -f "$OPT/neon-display" ] && install -m755 "$OPT/neon-display" /usr/local/bin/neon-display
   install -m755 "$OPT/neon-update" /usr/local/bin/neon-update   # install troca o arquivo sem afetar este processo
 }
@@ -100,7 +101,7 @@ apply() {
   [ -d "$src/neonos/vendor" ] || cp -a "$OPT/vendor" "$src/neonos/" 2>/dev/null || true
   rm -rf "$OPT.new"; cp -a "$src/neonos" "$OPT.new"
   rm -rf "$OPT"; mv "$OPT.new" "$OPT"
-  chmod +x "$OPT"/*.sh "$OPT/neon" "$OPT/neon-notify" "$OPT/neon-update" "$OPT/neon-display" 2>/dev/null || true
+  chmod +x "$OPT"/*.sh "$OPT/neon" "$OPT/neon-notify" "$OPT/neon-update" "$OPT/neon-display" "$OPT/neon-flatpak" 2>/dev/null || true
   install_cmds
 
   inc="$src/iso/config/includes.chroot"
