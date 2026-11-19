@@ -1,0 +1,26 @@
+#!/bin/bash
+# neon-shot [tela|area] — captura de tela do NeonOS (PrintScreen / Shift+PrintScreen / Super+Shift+S)
+# Salva em Imagens/Capturas de tela e copia para a área de transferência.
+dir="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Imagens")/Capturas de tela"
+[ "$dir" = "$HOME/Capturas de tela" ] && dir="$HOME/Imagens/Capturas de tela"
+mkdir -p "$dir"
+f="$dir/captura-$(date +%Y-%m-%d_%H-%M-%S).png"
+case "${1:-tela}" in
+  area)
+    g=$(slurp -d -b 05060ccc -c 00f0ffff -s 00f0ff22 -w 2 -F "JetBrains Mono") || exit 0
+    grim -g "$g" "$f" ;;
+  *)
+    grim "$f" ;;
+esac || { neon-notify "Captura falhou" "não foi possível capturar a tela" err; exit 1; }
+command -v wl-copy >/dev/null && wl-copy --type image/png < "$f" &
+command -v canberra-gtk-play >/dev/null && canberra-gtk-play -i camera-shutter >/dev/null 2>&1 &
+python3 - "$f" <<'PY'
+import json, os, sys, urllib.request
+f = sys.argv[1]
+body = {"title": "Captura salva", "body": os.path.basename(f) + " · copiada · clique para ver", "kind": "ok", "open": f}
+try:
+    urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:8080/api/notify", json.dumps(body).encode(),
+                                                  {"Content-Type": "application/json"}), timeout=5)
+except OSError:
+    pass
+PY

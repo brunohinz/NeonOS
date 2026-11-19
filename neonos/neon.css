@@ -354,3 +354,175 @@ body[data-fx="off"] #lockFx{display:none}
 .dm-card.sel pre{color:var(--accent);text-shadow:0 0 8px var(--accent)}
 .dm-info{margin-top:10px;font-size:11px}
 @media (max-width:560px){.dm-cards{grid-template-columns:repeat(2,1fr)}}
+
+/* =====================================================================
+   NeonOS 0.6 — sistema completo: apps nativos, arquivos, loja, ajustes
+   ===================================================================== */
+
+/* ---------- barra de tarefas: janelas do NeonOS + apps nativos ---------- */
+#wtasks,#ntasks{display:contents}
+.task.native{display:flex;align-items:center;gap:6px;padding:0 10px 0 7px;border-style:dashed}
+.task.native img{width:18px;height:18px;flex-shrink:0;object-fit:contain;filter:drop-shadow(0 0 3px rgba(0,240,255,.35))}
+.task.native i{font-style:normal;color:var(--accent)}
+.task.native span{overflow:hidden;text-overflow:ellipsis}
+.task.native.on{border-style:solid}
+.task.min{opacity:.5}
+.task.min:hover{opacity:1}
+
+/* ---------- ícones de apps nativos ---------- */
+.icon .nat img{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(0,240,255,.4))}
+.icon .nat i,.sm-ni i,.pg-ic i{font-style:normal;color:var(--accent)}
+
+/* ---------- menu iniciar ---------- */
+#startMenu{width:min(600px,calc(var(--pw) - 16px));max-height:min(640px,calc(var(--ph) - 70px));overflow:hidden;flex-direction:column;padding:10px}
+#startMenu.open{display:flex}
+#startMenu .sm-banner{flex-shrink:0;margin-bottom:8px}
+#startMenu button::before{content:none}
+#startMenu .sm-q{flex-shrink:0;margin-bottom:8px}
+.sm-main{flex:1;overflow:auto;min-height:0;padding-right:2px}
+.sm-res{display:none}
+#startMenu.searching .sm-home{display:none}
+#startMenu.searching .sm-res{display:block}
+#startMenu h4{display:flex;gap:6px;align-items:baseline}
+.sm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:12px}
+#startMenu .sm-app{display:grid;justify-items:center;gap:4px;padding:8px 4px;text-align:center;border:1px solid transparent;font-size:11px}
+#startMenu .sm-app:hover{border-color:var(--accent);background:rgba(0,240,255,.08)}
+.sm-app .sm-ic{font-size:20px;line-height:26px;white-space:nowrap;color:var(--accent);text-shadow:0 0 8px var(--accent)}
+.sm-app .sm-ic svg.ico{width:26px;height:26px}
+.sm-all{display:grid;grid-template-columns:1fr 1fr;gap:1px 6px}
+#startMenu .sm-row,.ow-list .sm-row{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:5px 8px;border-left:2px solid transparent;min-width:0}
+#startMenu .sm-row:hover,#startMenu .sm-row.sel,.ow-list .sm-row:hover,.ow-list .sm-row.sel{border-left-color:var(--accent);background:rgba(0,240,255,.08);color:var(--accent)}
+.sm-row > span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:grid}
+.sm-row small{color:var(--dim);font-size:10.5px;overflow:hidden;text-overflow:ellipsis}
+.sm-ni{width:22px;height:22px;flex-shrink:0;display:grid;place-items:center;color:var(--accent)}
+.sm-ni img{width:22px;height:22px;object-fit:contain}
+.sm-ni svg.ico{width:20px;height:20px}
+.sm-foot{flex-shrink:0;display:flex;gap:4px;border-top:1px dashed var(--line);padding-top:8px;margin-top:6px}
+#startMenu .sm-foot button{flex:1;display:block;width:auto;text-align:center;padding:6px 4px;font-size:11px;border:1px solid transparent;border-left:1px solid transparent}
+#startMenu .sm-foot button:hover{border-color:var(--accent)}
+#startMenu .sm-foot .danger:hover{border-color:var(--hot)}
+
+/* ---------- configurações rápidas, calendário, pendrives ---------- */
+.qt{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+.qt-b{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--line);font-size:11.5px;text-align:left}
+.qt-b svg{width:16px;height:16px;flex-shrink:0}
+.qt-b.on{border-color:var(--accent);background:rgba(0,240,255,.14);color:var(--accent);box-shadow:inset 0 0 12px rgba(0,240,255,.12)}
+.qt-b:disabled{opacity:.35;pointer-events:none}
+.qp{margin:6px 0 10px}.qp small{display:block;margin-bottom:4px;letter-spacing:2px;font-size:10px}
+.qp .fx-pick{grid-template-columns:repeat(3,1fr)}
+.qp .fx-pick button{padding:6px 2px}
+.qa{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.qa .btn{padding:6px 4px;font-size:11.5px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:12px}
+.cal b{color:var(--hot);font-weight:400;font-size:10.5px;padding:2px 0}
+.cal span{padding:5px 0;border:1px solid transparent}
+.cal span.today{border-color:var(--accent);color:#000;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.cal-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);color:var(--dim);font-size:11.5px}
+.pop h4 span{display:flex;gap:4px}
+.drv{display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px dashed rgba(0,240,255,.15)}
+.drv > span svg{width:18px;height:18px;color:var(--accent)}
+.drv div{flex:1;display:grid;min-width:0}.drv b{font-weight:400;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drv small{color:var(--dim);font-size:10.5px}
+
+/* ---------- arquivos ---------- */
+.fm{display:grid;grid-template-columns:170px 1fr;grid-template-rows:auto 1fr auto;height:100%}
+.fm-bar{grid-column:1/3;display:flex;gap:5px;padding:7px 8px;border-bottom:1px solid var(--line);align-items:center}
+.fm-bar .field{padding:3px 8px}
+.fm-loc{flex:1.4;min-width:120px}
+.fm-find{flex:1;min-width:90px}
+.fm-bar select.field{width:auto;padding:2px 4px;color:var(--text)}
+.fm-side{border-right:1px solid var(--line);padding:6px;overflow:auto}
+.fm-side h6{margin:8px 6px 4px;color:var(--hot);letter-spacing:2px;font-weight:400;font-size:10px}
+.fm-side h6:first-child{margin-top:2px}
+.fm-side button{display:flex;gap:6px;align-items:center;width:100%;text-align:left;padding:5px 8px;font-size:12px;color:var(--dim);border-left:2px solid transparent;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.fm-side button i{font-style:normal;width:14px;text-align:center;color:var(--accent);opacity:.8}
+.fm-side button.on{color:var(--accent);border-left-color:var(--accent);background:rgba(0,240,255,.06)}
+.fm-side button.drop{background:rgba(255,42,109,.15);color:var(--hot)}
+.fm-side small{padding:0 8px;font-size:11px}
+.fm-main{overflow:auto;outline:0;position:relative}
+.fm-main.drop{box-shadow:inset 0 0 0 1px var(--hot)}
+.fm-grid.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;padding:10px;align-content:start}
+.fm-grid.list{display:block;padding:4px 6px}
+.fm-item{position:relative;user-select:none}
+.fm-item .g img{width:60px;height:44px;object-fit:cover;border:1px solid var(--line);display:block;margin:0 auto}
+.fm-item.sel{border-color:var(--accent);background:rgba(0,240,255,.14)}
+.fm-item.sel .nm{color:var(--accent)}
+.fm-item.cut{opacity:.45}
+.fm-item.drop{border-color:var(--hot)!important;background:rgba(255,42,109,.16)}
+.fm-item .wh{display:block;color:var(--dim);font-size:9.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fm-grid.list .fm-item{display:grid;grid-template-columns:24px 1fr 90px 130px;gap:8px;align-items:center;text-align:left;padding:3px 6px;word-break:normal}
+.fm-grid.list .fm-item .g{font-size:15px;line-height:20px;text-align:center}
+.fm-grid.list .fm-item .g img{width:20px;height:20px;border:0}
+.fm-grid.list .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fm-grid.list .sz,.fm-grid.list .dt{color:var(--dim);font-size:10.5px;white-space:nowrap}
+.fm-grid.list .sz{text-align:right}
+.fm-grid.list .wh{grid-column:2/5}
+.fm-head{display:grid;grid-template-columns:24px 1fr 90px 130px;gap:8px;padding:2px 6px 5px;color:var(--hot);font-size:10px;letter-spacing:2px;border-bottom:1px dashed var(--line);margin-bottom:3px}
+.fm-head span:nth-child(3){text-align:right}
+.fm-status{grid-column:1/3;display:flex;justify-content:space-between;gap:10px;padding:3px 10px;border-top:1px solid var(--line);font-size:10.5px;color:var(--dim);white-space:nowrap;overflow:hidden}
+.fm-status .sr{color:var(--accent)}
+
+/* ---------- diálogos: abrir com, propriedades ---------- */
+.modal .box.ow{width:min(440px,92vw)}
+.ow-list{max-height:300px;overflow:auto;border:1px solid var(--line);padding:4px}
+.modal .kv{font-size:12px;word-break:break-all}
+
+/* ---------- loja ---------- */
+.st-tabs{display:flex;gap:2px;padding:0 8px;border-bottom:1px solid var(--line)}
+.st-tabs button{padding:7px 14px;font-size:12px;color:var(--dim);border-bottom:2px solid transparent;margin-bottom:-1px}
+.st-tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+.st-list{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.card{gap:6px}
+.card-h{display:flex;gap:10px;align-items:flex-start}
+.card-h > div{display:grid;gap:2px;min-width:0}
+.ci{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border:1px solid rgba(0,240,255,.2);background:rgba(0,0,0,.3)}
+.ci img{width:34px;height:34px;object-fit:contain}
+.ci i{font-style:normal;color:var(--hot);font-size:18px}
+.card .src{font-size:10px;opacity:.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-b{display:flex;gap:6px}
+.card-b .btn{margin-top:0}
+
+/* ---------- programas ---------- */
+.pg-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.pg-grid button{display:flex!important;gap:10px;align-items:center}
+.pg-grid button > span:last-child{display:grid;gap:2px;min-width:0}
+.pg-grid b{font-weight:400;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg-grid small{color:var(--dim);font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg-ic{width:32px;height:32px;flex-shrink:0;display:grid;place-items:center}
+.pg-ic img{width:32px;height:32px;object-fit:contain}
+
+/* ---------- gerenciador de tarefas ---------- */
+.tk{display:flex;flex-direction:column;height:100%}
+.tk-top{display:flex;gap:10px;align-items:center;padding:8px;border-bottom:1px solid var(--line)}
+.tk-top .field{width:160px;padding:3px 8px}
+.tk-top .row{margin:0;white-space:nowrap;font-size:11px}
+.tk-sum{flex:1;font-size:11.5px}
+.tk-wins{display:flex;flex-wrap:wrap;gap:6px;padding:6px 8px;align-items:center}
+.tk-wins:empty{display:none}
+.tk-wins small{letter-spacing:2px;font-size:10px}
+.tk-win{display:flex;align-items:center;gap:6px;border:1px solid var(--line);padding:2px 4px 2px 8px;font-size:11px;cursor:var(--cur-pointer)}
+.tk-win img{width:16px;height:16px}
+.tk-scroll{flex:1;overflow:auto;padding:0 8px}
+.tk table{width:100%;border-collapse:collapse;font-size:11px}
+.tk th{position:sticky;top:0;background:var(--panel2);text-align:left;color:var(--hot);font-weight:400;letter-spacing:1px;padding:5px 6px;cursor:var(--cur-pointer)}
+.tk td{padding:3px 6px;border-bottom:1px dashed rgba(0,240,255,.12);white-space:nowrap}
+.tk td:first-child{max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.tk tr:hover td{background:rgba(0,240,255,.05)}
+.tk td .mini{line-height:17px;font-size:10px}
+
+/* ---------- configurações ---------- */
+.set nav{overflow:auto}
+.set nav button{padding:6px 10px;font-size:12px}
+.bt-dev{display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px dashed rgba(0,240,255,.15);flex-wrap:wrap}
+.bt-dev.on .bi{color:var(--ok);text-shadow:0 0 8px var(--ok)}
+.bt-dev > div{flex:1;display:grid;min-width:140px}
+.bt-dev b{font-weight:400;color:var(--accent)}
+.bt-dev small{color:var(--dim);font-size:10.5px}
+.bi{width:22px;text-align:center;font-size:15px;color:var(--accent)}
+.bt-list{margin:8px 0}
+.pwf{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-width:440px}
+.pwf .cu{grid-column:1/3}
+.pwf .btn{justify-self:start}
+.tools{display:flex;flex-wrap:wrap;gap:6px}
+.dfl-grid{display:grid;gap:2px}
+.dfl-grid .row{cursor:default}

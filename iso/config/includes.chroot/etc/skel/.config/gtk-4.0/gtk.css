@@ -1,0 +1,66 @@
+/* NeonOS — cores neon para apps GTK 4 / libadwaita (Calculadora, Discos, Configurações do GNOME...) */
+
+:root {
+  --accent-bg-color: #00f0ff;
+  --accent-fg-color: #05060a;
+  --accent-color: #00f0ff;
+  --destructive-bg-color: #ff2a6d;
+  --destructive-fg-color: #05060a;
+  --destructive-color: #ff2a6d;
+  --success-color: #39ff14;
+  --warning-color: #f5e663;
+  --error-color: #ff2a6d;
+  --window-bg-color: #0a0b14;
+  --window-fg-color: #cfe9ff;
+  --view-bg-color: #05060a;
+  --view-fg-color: #cfe9ff;
+  --headerbar-bg-color: #0e1020;
+  --headerbar-fg-color: #cfe9ff;
+  --headerbar-border-color: rgba(0, 240, 255, 0.32);
+  --headerbar-backdrop-color: #0a0b14;
+  --sidebar-bg-color: #05060a;
+  --sidebar-fg-color: #cfe9ff;
+  --secondary-sidebar-bg-color: #07080f;
+  --card-bg-color: rgba(0, 240, 255, 0.05);
+  --card-fg-color: #cfe9ff;
+  --dialog-bg-color: #0e1020;
+  --dialog-fg-color: #cfe9ff;
+  --popover-bg-color: #0e1020;
+  --popover-fg-color: #cfe9ff;
+  --thumbnail-bg-color: #0e1020;
+  --border-color: rgba(0, 240, 255, 0.32);
+  --window-radius: 0px;
+}
+
+/* nomes antigos (libadwaita antes da 1.6 e apps GTK 4 sem libadwaita) */
+@define-color accent_color #00f0ff;
+@define-color accent_bg_color #00f0ff;
+@define-color accent_fg_color #05060a;
+@define-color destructive_bg_color #ff2a6d;
+@define-color destructive_color #ff2a6d;
+@define-color window_bg_color #0a0b14;
+@define-color window_fg_color #cfe9ff;
+@define-color view_bg_color #05060a;
+@define-color view_fg_color #cfe9ff;
+@define-color headerbar_bg_color #0e1020;
+@define-color headerbar_fg_color #cfe9ff;
+@define-color headerbar_border_color rgba(0, 240, 255, 0.32);
+@define-color sidebar_bg_color #05060a;
+@define-color card_bg_color rgba(0, 240, 255, 0.05);
+@define-color popover_bg_color #0e1020;
+@define-color dialog_bg_color #0e1020;
+
+/* formas: cantos retos e bordas neon */
+window, window.csd, .card, button, entry, popover > contents, .boxed-list, list.boxed-list, row, dialog-host > dialog > sheet { border-radius: 0; }
+headerbar { border-bottom: 1px solid rgba(0, 240, 255, 0.32); box-shadow: none;
+  background-image: linear-gradient(90deg, rgba(0, 240, 255, 0.13), rgba(255, 42, 109, 0.07)); }
+headerbar .title, windowtitle .title { font-family: "JetBrains Mono", monospace; letter-spacing: 1px; color: #00f0ff; }
+button:not(.flat):not(.suggested-action):not(.destructive-action) { background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(0, 240, 255, 0.32); }
+button:not(.flat):hover { border-color: #00f0ff; color: #00f0ff; }
+button.suggested-action, button.destructive-action { box-shadow: 0 0 10px alpha(currentColor, 0.25); }
+entry, spinbutton, .search-entry { border: 1px solid rgba(0, 240, 255, 0.32); background: #05060a; caret-color: #ff2a6d; }
+entry:focus-within { border-color: #00f0ff; }
+.card, list.boxed-list { border: 1px solid rgba(0, 240, 255, 0.2); }
+popover > contents { border: 1px solid #00f0ff; }
+tooltip { border: 1px solid #ff2a6d; }
+progressbar progress, scale highlight, levelbar block.filled { box-shadow: 0 0 8px rgba(0, 240, 255, 0.5); }

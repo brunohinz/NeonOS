@@ -5,7 +5,7 @@
   neon-display mode MODO       pc | duplicate | extend | second
   neon-display primary NOME    escolhe o monitor principal (barra de tarefas e ícones)
   neon-display apply           reaplica o modo salvo (usado no login)
-  neon-display shell-rule      ajusta a janela da interface para cobrir todos os monitores
+  neon-display shell-rule      recria o rc.xml: interface em todos os monitores + espaço da barra
 """
 import json, os, re, subprocess, sys
 
@@ -132,30 +132,60 @@ def set_mode(mode):
     return mode
 
 
+TEMPLATE = "/usr/share/neonos/labwc/rc.xml"
+MANUAL = re.compile(r"<!--\s*neonos:manual\s*-->")
+TASKBAR_H = 44
+
+
+def fill(xml, name, body):
+    """Troca o conteúdo entre <!-- neonos:NOME-begin --> e <!-- neonos:NOME-end -->."""
+    b, e = f"<!-- neonos:{name}-begin -->", f"<!-- neonos:{name}-end -->"
+    m = re.search(r"([ \t]*)" + re.escape(b) + r".*?" + re.escape(e), xml, flags=re.S)
+    if not m:
+        return None
+    ind = m.group(1)
+    return xml[:m.start()] + ind + b + "\n" + body + ind + e + xml[m.end():]
+
+
 def shell_rule():
-    """Reescreve a regra da janela da interface no rc.xml para cobrir todos os monitores."""
+    """Recria o rc.xml a partir do modelo do NeonOS (atalhos novos chegam pelas atualizações),
+    faz a janela da interface cobrir todos os monitores e reserva o espaço da barra de tarefas."""
     try:
-        bb = layout()["bbox"]
+        lay = layout()
     except SystemExit:
-        bb = None
+        lay = None
+    bb = lay["bbox"] if lay else None
+    prim = next((m["name"] for m in lay["monitors"] if m["primary"]), None) if lay else None
     if bb:
-        rule = (f'{BEGIN}\n    <windowRule identifier="neonos-shell" serverDecoration="no" skipTaskbar="yes">\n'
+        rule = ('    <windowRule identifier="neonos-shell" serverDecoration="no" fixedPosition="yes">\n'
                 f'      <action name="MoveTo" x="{bb["x"]}" y="{bb["y"]}" />\n'
                 f'      <action name="ResizeTo" width="{bb["w"]}" height="{bb["h"]}" />\n'
-                f'    </windowRule>\n    {END}')
+                '    </windowRule>\n')
+        margin = f'  <margin bottom="{TASKBAR_H}" output="{prim}" />\n' if prim else ""
     else:
-        rule = (f'{BEGIN}\n    <windowRule identifier="neonos-shell" serverDecoration="no" skipTaskbar="yes">\n'
-                f'      <action name="Maximize" />\n    </windowRule>\n    {END}')
+        rule = ('    <windowRule identifier="neonos-shell" serverDecoration="no">\n'
+                '      <action name="Maximize" />\n    </windowRule>\n')
+        margin = ""
     try:
         with open(RC) as f:
-            xml = f.read()
+            cur = f.read()
     except OSError:
+        cur = ""
+    base = cur
+    if not MANUAL.search(cur):
+        try:
+            with open(TEMPLATE) as f:
+                base = f.read()
+        except OSError:
+            pass
+    if not base:
         return
-    if BEGIN in xml and END in xml:
-        new = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), lambda m: rule, xml, flags=re.S)
-    else:
-        new = xml.replace("<windowRules>", "<windowRules>\n    " + rule, 1)
-    if new != xml:
+    new = fill(base, "shell", rule)
+    if new is None:   # rc.xml antigo, sem marcadores
+        new = base.replace("<windowRules>", "<windowRules>\n    " + BEGIN + "\n" + rule + "    " + END, 1)
+    new = fill(new, "margin", margin) or new
+    if new != cur:
+        os.makedirs(os.path.dirname(RC), exist_ok=True)
         with open(RC, "w") as f:
             f.write(new)
     subprocess.run(["labwc", "--reconfigure"], capture_output=True)

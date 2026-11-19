@@ -32,6 +32,10 @@ const ICON = {
   off: `<svg viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0" opacity=".3"/><path d="M4 4l16 16"/></svg>`,
   vol: m => `<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/>${m ? '<path d="M17 9l5 6M22 9l-5 6"/>' : '<path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a9 9 0 0 1 0 12"/>'}</svg>`,
   bat: (l, ch) => `<svg viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10"/><path d="M22 10v4"/><rect x="4" y="9" width="${Math.max(1, 14 * l / 100)}" height="6" fill="currentColor" stroke="none"/>${ch ? '<path d="M12 6l-3 6h4l-2 6" stroke="var(--warn)"/>' : ''}</svg>`,
+  bt: `<svg viewBox="0 0 24 24"><path d="M7 7l10 10-5 4V3l5 4L7 17"/></svg>`,
+  bell: `<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>`,
+  moon: `<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>`,
+  usb: `<svg viewBox="0 0 24 24"><path d="M12 2v14M8 6l4-4 4 4M7 11v2l5 3 5-3v-3"/><circle cx="12" cy="19" r="2"/><rect x="15" y="8" width="4" height="3"/><circle cx="7" cy="10" r="1.5"/></svg>`,
   sun: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`,
 };
 
@@ -77,18 +81,74 @@ function pollStats() {
   };
   tick();
 }
+let WMSEQ = -1;
 function pollEvents() {
   let last = null;
   const tick = async () => {
     try {
-      const r = await api('/api/events?' + qs({ since: last ?? 0 }));
-      if (last !== null) r.events.forEach(e => e.kind === 'ui' ? uiEvent(e.title) : toast(e.title, e.body, e.kind));
+      const r = await api('/api/events?' + qs({ since: last ?? 0, wm: WMSEQ, wait: last === null ? '' : 1 }));
+      if (last !== null && r.last < last) last = r.last;            // o backend reiniciou
+      if (last !== null) r.events.forEach(e => e.kind === 'ui' ? uiEvent(e.title, e.data)
+        : (SETTINGS.dnd && e.kind !== 'err') ? null
+        : toast(e.title, e.body, e.kind, e.data && e.data.open ? () => openPath(e.data.open) : null));
       last = r.last;
-    } catch {}
-    setTimeout(tick, 800);
+      if (r.wm !== WMSEQ) { WMSEQ = r.wm; refreshNative(); }
+      setTimeout(tick, 20);
+    } catch { setTimeout(tick, 1500); }
   };
   tick();
 }
+
+/* ---------------------------------------------------------- janelas dos apps nativos (Steam, LibreOffice, Flatpak...) */
+let NATIVE = [], WMOK = false;
+async function refreshNative() {
+  const r = await api('/api/wm').catch(() => null);
+  WMOK = !!(r && r.available); NATIVE = WMOK ? r.windows : [];
+  renderNative(); bus.emit('native');
+}
+function renderNative() {
+  const box = $('#ntasks'); if (!box) return;
+  const ids = new Set(NATIVE.map(w => String(w.id)));
+  $$('.task', box).forEach(b => { if (!ids.has(b.dataset.id)) b.remove(); });
+  for (const w of NATIVE) {
+    let b = box.querySelector(`[data-id="${w.id}"]`);
+    if (!b) {
+      b = el('button', 'task native'); b.dataset.id = w.id; box.appendChild(b);
+      b.onclick = () => { Sfx.click(); api('/api/wm', { id: w.id, action: 'toggle' }); };
+      b.oncontextmenu = e => {
+        e.preventDefault(); const c = NATIVE.find(x => x.id === w.id) || w;
+        ctxMenu(e.clientX, e.clientY, [
+          { label: c.min ? 'Restaurar' : 'Minimizar', fn: () => api('/api/wm', { id: w.id, action: c.min ? 'activate' : 'minimize' }) },
+          { label: c.max ? 'Tamanho normal' : 'Maximizar', fn: () => api('/api/wm', { id: w.id, action: c.max ? 'unmaximize' : 'maximize' }) },
+          { label: 'Fechar janela', danger: true, fn: () => api('/api/wm', { id: w.id, action: 'close' }) }]);
+      };
+    }
+    const key = [w.title, w.name, w.icon].join('|');
+    if (b.dataset.key !== key) {
+      b.dataset.key = key; b.title = w.title && w.title !== w.name ? `${w.name} — ${w.title}` : w.name;
+      b.innerHTML = `${w.icon ? `<img src="/api/icon?${qs({ wm: w.app_id })}" alt="">` : '<i>◇</i>'}<span>${esc(w.title || w.name)}</span>`;
+    }
+    b.classList.toggle('on', w.active && !w.min);
+    b.classList.toggle('min', w.min);
+  }
+}
+/* A interface é uma janela por baixo dos apps nativos. Quando algo do NeonOS precisa aparecer
+   (menu, janela, aviso), ela vem para frente; "temporário" devolve os apps ao fechar. */
+const Layer = {
+  temp: false, t: null,
+  covered() { return WMOK && NATIVE.some(w => !w.min); },
+  up(temp = false) {
+    clearTimeout(this.t);
+    if (!temp) this.temp = false;
+    if (!this.covered() || (temp && this.temp)) return;
+    if (temp) this.temp = true;
+    api('/api/wm/shell', { temp }).catch(() => {});
+  },
+  down() {
+    clearTimeout(this.t);
+    this.t = setTimeout(() => { if (this.temp) { this.temp = false; api('/api/wm/restore', {}).catch(() => {}); } }, 90);
+  }
+};
 
 /* ---------------------------------------------------------- sons (sintetizados, sem arquivos) */
 const Sfx = {
@@ -145,10 +205,10 @@ function ask({ title, text = '', input = null, value = '', ok = 'OK', cancel = '
     m.innerHTML = `<div class="box"><h3>${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ''}
       ${input ? `<input class="field" type="${input}" value="${esc(value)}" spellcheck="false" autocomplete="off">` : ''}
       <div class="btns">${cancel ? `<button class="btn c">${esc(cancel)}</button>` : ''}<button class="btn o ${danger ? 'hot' : ''}">${esc(ok)}</button></div></div>`;
-    document.body.appendChild(m);
+    document.body.appendChild(m); Layer.up(true);
     Ascii.scramble($('h3', m), `[ ${title} ]`, 320);
     const inp = $('input', m);
-    const done = v => { m.remove(); res(v); };
+    const done = v => { m.remove(); Layer.down(); res(v); };
     $('.o', m).onclick = () => done(input ? inp.value : true);
     if ($('.c', m)) $('.c', m).onclick = () => done(null);
     m.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') $('.o', m).click(); if (e.key === 'Escape') done(null); });
@@ -310,7 +370,7 @@ function openApp(id, arg) {
   $('#wins').appendChild(w);
   if (app.max) toggleMax(w, true);
   const task = el('button', 'task');
-  $('#tasks').appendChild(task);
+  $('#wtasks').appendChild(task);
   const rec = { id: wid, app: id, el: w, task, cleanup: [], onArg: null };
   WINS.set(wid, rec);
   const ctx = {
@@ -347,6 +407,7 @@ function toggleMax(w, force) {
   w.classList.toggle('max', on);
 }
 function focusWin(wid) {
+  Layer.up();
   for (const r of WINS.values()) r.el.classList.toggle('focus', r.id === wid);
   const r = WINS.get(wid); if (r) r.el.style.zIndex = ++zTop;
   refreshTasks();
@@ -370,35 +431,147 @@ function dragWin(win, handle) {
 }
 
 /* ---------------------------------------------------------- área de trabalho e menu */
+const MENU = ['terminal', 'files', 'browser', 'steam', 'store', 'programs', 'player', 'tasks', 'hud', 'lab', 'settings', 'installer'];
+const SHORTCUTS = [
+  ['Wi-Fi e internet', 'rede wifi internet cabo vpn', () => popover($('#tNet'), renderNet)],
+  ['Bluetooth', 'fone controle mouse teclado caixa de som', () => openApp('settings', 'bt')],
+  ['Impressoras e scanner', 'imprimir impressora escanear', () => openApp('settings', 'print')],
+  ['Monitores (Super+P)', 'tela resolucao estender duplicar projetar', () => openApp('settings', 'tela')],
+  ['Som', 'volume audio microfone saida', () => openApp('settings', 'sound')],
+  ['Energia e bateria', 'suspender desligar tela bateria desempenho', () => openApp('settings', 'power')],
+  ['Teclado, data e hora', 'fuso horario relogio layout idioma regiao', () => openApp('settings', 'region')],
+  ['Apps padrão e inicialização', 'abrir com padrao iniciar ligar', () => openApp('settings', 'apps')],
+  ['Drivers (placa de vídeo)', 'nvidia amd intel driver gpu placa', () => openApp('settings', 'drv')],
+  ['Atualizações', 'update atualizar flatpak', () => openApp('settings', 'upd')],
+  ['Aparência e papel de parede', 'tema cor wallpaper fundo', () => openApp('settings', 'look')],
+  ['Senha, bloqueio e firewall', 'seguranca senha bloqueio firewall', () => openApp('settings', 'sec')],
+  ['Gerenciador de tarefas', 'processos travou finalizar ctrl shift esc', () => openApp('tasks')],
+  ['Capturar a tela inteira', 'print screenshot captura', () => api('/api/screenshot', {})],
+  ['Capturar uma área da tela', 'print recorte captura', () => api('/api/screenshot', { area: true })],
+];
+let NAPPS = null;
+async function loadApps(force) {
+  if (!NAPPS || force) NAPPS = (await api('/api/apps').catch(() => ({}))).apps || NAPPS || [];
+  return NAPPS;
+}
+const appIcon = a => a.icon ? `<img src="/api/icon?${qs({ app: a.id })}" alt="">` : '<i>◇</i>';
+addEventListener('error', e => { const t = e.target; if (t && t.tagName === 'IMG' && t.src.includes('/api/icon')) t.replaceWith(el('i', '', '◇')); }, true);
+async function launchNative(a) {
+  const r = await api('/api/apps/launch', { id: a.id }).catch(() => ({ error: 'sem resposta do sistema' }));
+  if (r.error) return toast('Não foi possível abrir', r.error, 'err');
+  if (r.terminal) openApp('terminal', { cmd: r.terminal }); else toast('Abrindo', a.name);
+}
+function nativeMenu(a, x, y) {
+  const pins = SETTINGS.pins || [];
+  ctxMenu(x, y, [
+    { label: 'Abrir', fn: () => launchNative(a) },
+    pins.includes(a.id)
+      ? { label: 'Tirar da área de trabalho', fn: () => { SETTINGS.pins = pins.filter(p => p !== a.id); saveSettings(); buildDesktop(); } }
+      : { label: 'Fixar na área de trabalho', fn: () => { SETTINGS.pins = [...pins, a.id]; saveSettings(); buildDesktop(); toast('Fixado na área de trabalho', a.name, 'ok'); } },
+    { label: 'Abrir ao ligar o computador', fn: async () => { await api('/api/autostart', { add: a.id }); toast('Vai abrir ao ligar', a.name, 'ok'); } },
+  ]);
+}
 function buildDesktop() {
   const box = $('#icons'); box.innerHTML = '';
+  const add = (glyph, name, open, menu) => {
+    const ic = el('div', 'icon', `<div class="glyph">${glyph}</div><div class="lbl">${esc(name)}</div>`);
+    ic.onmouseenter = () => Ascii.scramble($('.lbl', ic), name, 260);
+    ic.onclick = () => { $$('.icon').forEach(x => x.classList.remove('sel')); ic.classList.add('sel'); Sfx.click(); };
+    ic.ondblclick = open;
+    if (menu) ic.oncontextmenu = e => { e.preventDefault(); e.stopPropagation(); menu(e); };
+    box.appendChild(ic);
+  };
   for (const id of DESK) {
     const a = APPS[id]; if (!a || (a.visible && !a.visible())) continue;
-    const ic = el('div', 'icon', `<div class="glyph">${a.svg || a.icon}</div><div class="lbl">${esc(a.name)}</div>`);
-    ic.onmouseenter = () => Ascii.scramble($('.lbl', ic), a.name, 260);
-    ic.onclick = () => { $$('.icon').forEach(x => x.classList.remove('sel')); ic.classList.add('sel'); Sfx.click(); };
-    ic.ondblclick = () => openApp(id);
-    box.appendChild(ic);
+    add(a.svg || a.icon, a.name, () => openApp(id));
+  }
+  for (const id of SETTINGS.pins || []) {
+    const a = (NAPPS || []).find(x => x.id === id); if (!a) continue;
+    add(`<span class="nat">${appIcon(a)}</span>`, a.name, () => launchNative(a), e => nativeMenu(a, e.clientX, e.clientY));
   }
 }
 function buildStart() {
   const sm = $('#startMenu');
   sm.innerHTML = `<div class="sm-banner"><pre class="sm-logo">▲ N E O N // O S</pre><pre class="sm-sub"></pre><pre class="awave" data-w="34"></pre></div>
-    <h4>// APLICATIVOS</h4>${DESK.filter(id => !APPS[id].visible || APPS[id].visible()).map(id => `<button data-a="${id}"><span class="sm-ic">${APPS[id].svg || APPS[id].icon}</span>&nbsp; ${esc(APPS[id].name)}</button>`).join('')}
-    <hr><h4>// SESSÃO</h4>
-    <button data-x="lock">⌧&nbsp; Bloquear tela</button><button data-x="suspend">◐&nbsp; Suspender</button>
-    <button data-x="reboot" class="danger">⟲&nbsp; Reiniciar</button><button data-x="poweroff" class="danger">⏻&nbsp; Desligar</button>`;
-  sm.onclick = e => {
-    const b = e.target.closest('button'); if (!b) return;
-    sm.classList.remove('open');
-    if (b.dataset.a) openApp(b.dataset.a);
-    if (b.dataset.x === 'lock') Lock.show(); else if (b.dataset.x) powerAction(b.dataset.x);
+    <input class="field sm-q" placeholder="buscar apps e configurações…" spellcheck="false" autocomplete="off">
+    <div class="sm-main"><div class="sm-home"><h4>// NEONOS</h4><div class="sm-grid"></div>
+      <h4>// TODOS OS APPS <small class="c-d sm-n"></small></h4><div class="sm-all"><div class="c-d">${Ascii.loading('indexando')}</div></div></div>
+      <div class="sm-res"></div></div>
+    <div class="sm-foot"><button data-x="lock" title="Bloquear (Super+L)">⌧ Bloquear</button><button data-x="suspend">◐ Suspender</button>
+      <button data-x="reboot" class="danger">⟲ Reiniciar</button><button data-x="poweroff" class="danger">⏻ Desligar</button></div>`;
+  const grid = $('.sm-grid', sm);
+  for (const id of MENU) {
+    const a = APPS[id]; if (!a || (a.visible && !a.visible())) continue;
+    const b = el('button', 'sm-app', `<span class="sm-ic">${a.svg || a.icon}</span><span>${esc(a.name)}</span>`);
+    b.onclick = () => { closeStart(); openApp(id); };
+    grid.appendChild(b);
+  }
+  $$('.sm-foot button', sm).forEach(b => b.onclick = () => { closeStart(); b.dataset.x === 'lock' ? Lock.show() : powerAction(b.dataset.x); });
+  const q = $('.sm-q', sm);
+  q.oninput = () => startSearch(q.value);
+  q.onkeydown = e => {
+    e.stopPropagation();
+    const items = $$('.sm-res .hit', sm); let i = items.findIndex(x => x.classList.contains('sel'));
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault(); if (!items.length) return;
+      items.forEach(x => x.classList.remove('sel'));
+      i = (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      items[i].classList.add('sel'); items[i].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') { const t = items[i] || items[0]; if (t) t.click(); }
+    else if (e.key === 'Escape') { if (q.value) { q.value = ''; startSearch(''); } else closeStart(); }
   };
+}
+function renderAllApps() {
+  const sm = $('#startMenu'), box = $('.sm-all', sm); if (!box) return;
+  box.innerHTML = NAPPS && NAPPS.length ? '' : '<div class="c-d">Nenhum app instalado ainda — veja a Loja.</div>';
+  (NAPPS || []).forEach(a => {
+    const b = el('button', 'sm-row', `<span class="sm-ni">${appIcon(a)}</span><span>${esc(a.name)}</span>`);
+    b.title = a.comment || a.name;
+    b.onclick = () => { closeStart(); launchNative(a); };
+    b.oncontextmenu = e => { e.preventDefault(); e.stopPropagation(); nativeMenu(a, e.clientX, e.clientY); };
+    box.appendChild(b);
+  });
+  $('.sm-n', sm).textContent = NAPPS ? `(${NAPPS.length})` : '';
+}
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+function startSearch(text) {
+  const sm = $('#startMenu'), res = $('.sm-res', sm), T = norm(text.trim());
+  sm.classList.toggle('searching', !!T);
+  res.innerHTML = '';
+  if (!T) return;
+  const hits = [];
+  MENU.forEach(id => {
+    const a = APPS[id];
+    if (a && (!a.visible || a.visible()) && norm(`${a.name} ${a.kw || ''}`).includes(T))
+      hits.push({ ic: a.svg || a.icon, name: a.name, sub: 'NeonOS', go: () => openApp(id) });
+  });
+  (NAPPS || []).forEach(a => {
+    if (norm(`${a.name} ${a.comment} ${a.keywords}`).includes(T))
+      hits.push({ ic: appIcon(a), name: a.name, sub: a.comment || 'app', go: () => launchNative(a), menu: e => nativeMenu(a, e.clientX, e.clientY) });
+  });
+  SHORTCUTS.forEach(([name, kw, fn]) => { if (norm(`${name} ${kw}`).includes(T)) hits.push({ ic: '⚙', name, sub: 'configuração', go: fn }); });
+  hits.push({ ic: '⬡', name: `Procurar "${text.trim()}" na Loja`, sub: 'instalar apps novos', go: () => openApp('store', text.trim()) });
+  hits.slice(0, 14).forEach((h, i) => {
+    const b = el('button', 'sm-row hit' + (i ? '' : ' sel'), `<span class="sm-ni">${h.ic}</span><span>${esc(h.name)}<small>${esc(h.sub)}</small></span>`);
+    b.onclick = () => { closeStart(); h.go(); };
+    if (h.menu) b.oncontextmenu = e => { e.preventDefault(); e.stopPropagation(); h.menu(e); };
+    res.appendChild(b);
+  });
 }
 function toggleStart(force) {
   const sm = $('#startMenu'), open = force ?? !sm.classList.contains('open');
-  sm.classList.toggle('open', open);
-  if (open) { Sfx.click(); Ascii.scramble($('.sm-sub', sm), `sessão de ${SYS.user} · ${SYS.kernel}`, 500); }
+  if (!open) return closeStart();
+  if (sm.classList.contains('open')) return;
+  closePop(); Layer.up(true);
+  sm.classList.add('open'); Sfx.click();
+  const q = $('.sm-q', sm); q.value = ''; startSearch(''); setTimeout(() => q.focus(), 40);
+  Ascii.scramble($('.sm-sub', sm), `sessão de ${SYS.user} · ${SYS.kernel}`, 500);
+  loadApps(true).then(renderAllApps);
+}
+function closeStart() {
+  const sm = $('#startMenu');
+  if (!sm.classList.contains('open')) return;
+  sm.classList.remove('open'); Layer.down();
 }
 async function powerAction(a) {
   const label = { poweroff: 'Desligar', reboot: 'Reiniciar', suspend: 'Suspender' }[a];
@@ -416,10 +589,10 @@ async function powerAction(a) {
 let POP = null;
 function popover(btn, render) {
   if (POP && POP.btn === btn) return closePop();
-  closePop(); Sfx.click();
+  closePop(); Sfx.click(); Layer.up(true);
   const p = el('div', 'pop'); document.body.appendChild(p); POP = { el: p, btn }; render(p);
 }
-function closePop() { if (POP) { POP.el.remove(); POP = null; } }
+function closePop() { if (POP) { POP.el.remove(); POP = null; Layer.down(); } }
 document.addEventListener('pointerdown', e => { if (POP && !POP.el.contains(e.target) && !POP.btn.contains(e.target) && !e.target.closest('.modal')) closePop(); });
 
 async function refreshNetIcon() {
@@ -455,15 +628,26 @@ async function renderNet(p) {
     box.appendChild(b);
   });
   $('.rs', p).onclick = async () => { box.innerHTML = `<div class="c-d">${Ascii.loading('varrendo')}</div>`; await api('/api/net/rescan', {}); setTimeout(() => POP && POP.el === p && renderNet(p), 2500); };
+  p.insertAdjacentHTML('beforeend', '<button class="btn vpn" style="margin-top:10px;width:100%">Configurações avançadas e VPN…</button>');
+  $('.vpn', p).onclick = () => { closePop(); api('/api/tool', { tool: 'network' }).then(r => r.error && toast('Erro', r.error, 'err')); };
   $('.wr', p).onchange = async e => { await rootCall('/api/net/radio', { on: e.target.checked }); setTimeout(() => { refreshNetIcon(); if (POP && POP.el === p) renderNet(p); }, 1500); };
 }
 async function renderQuick(p) {
   p.innerHTML = `<h4>// CONTROLES</h4><div class="q c-d">${Ascii.loading()}</div>`;
-  const [a, b] = await Promise.all([api('/api/audio').catch(() => ({})), api('/api/brightness').catch(() => ({}))]);
-  const q = $('.q', p); q.className = 'q';
+  const [a, b, n, bt, pw] = await Promise.all(['/api/audio', '/api/brightness', '/api/net?quick=1', '/api/bt', '/api/power/settings']
+    .map(u => api(u).catch(() => ({}))));
+  const q = $('.q', p); if (!q) return; q.className = 'q';
+  const prof = pw.profiles, PN = { 'power-saver': 'Economia', balanced: 'Equilibrado', performance: 'Desempenho' };
   q.innerHTML = (a.available ? `<div class="slider-row"><button class="mini mu" title="Mudo">${ICON.vol(a.muted)}</button><input type="range" class="va" min="0" max="100" value="${a.volume}"><span class="vv">${a.volume}%</span></div>` : '<div class="c-d">Áudio do sistema indisponível</div>')
-    + (b.available ? `<div class="slider-row"><span class="mini">${ICON.sun}</span><input type="range" class="ba" min="1" max="100" value="${b.percent}"><span class="bv">${b.percent}%</span></div>` : '<div class="c-d" style="margin-top:4px">Brilho: sem controle de tela (desktop/VM)</div>')
-    + `<hr style="border:0;border-top:1px dashed var(--line);margin:10px 0">
+    + (b.available ? `<div class="slider-row"><span class="mini">${ICON.sun}</span><input type="range" class="ba" min="1" max="100" value="${b.percent}"><span class="bv">${b.percent}%</span></div>` : '')
+    + `<div class="qt">
+        <button class="qt-b ${n.wifi_on ? 'on' : ''}" data-q="wifi" ${n.available ? '' : 'disabled'}>${ICON.wifi(3)}<span>Wi-Fi</span></button>
+        <button class="qt-b ${bt.powered ? 'on' : ''}" data-q="bt" ${bt.available ? '' : 'disabled'} title="${bt.available ? '' : esc(bt.reason || '')}">${ICON.bt}<span>Bluetooth</span></button>
+        <button class="qt-b ${SETTINGS.dnd ? 'on' : ''}" data-q="dnd">${ICON.bell}<span>Não perturbe</span></button>
+        <button class="qt-b ${pw.night_on ? 'on' : ''}" data-q="night" ${pw.night_ok ? '' : 'disabled'}>${ICON.moon}<span>Luz noturna</span></button></div>`
+    + (prof && prof.options && prof.options.length ? `<div class="qp"><small class="c-d">ENERGIA</small><div class="fx-pick">${prof.options.map(o => `<button data-p="${esc(o)}" class="${o === prof.current ? 'on' : ''}">${PN[o] || esc(o)}</button>`).join('')}</div></div>` : '')
+    + `<div class="qa"><button class="btn" data-q="shot">▣ Capturar tela</button><button class="btn" data-q="set">⚙ Configurações</button></div>
+       <hr style="border:0;border-top:1px dashed var(--line);margin:10px 0">
        <label class="row"><input type="checkbox" class="sf" ${SETTINGS.sound ? 'checked' : ''}> Sons da interface</label>
        <label class="row"><input type="checkbox" class="am" ${SETTINGS.ambient ? 'checked' : ''}> Zumbido ambiente</label>`;
   if (a.available) {
@@ -473,19 +657,72 @@ async function renderQuick(p) {
     $('.mu', q).onclick = async () => { const r = await api('/api/audio', { mute: !a.muted }); a.muted = r.muted; $('.mu', q).innerHTML = ICON.vol(a.muted); setVolIcon(r); };
   }
   if (b.available) { const ba = $('.ba', q); ba.oninput = throttle(() => { $('.bv', q).textContent = ba.value + '%'; api('/api/brightness', { percent: +ba.value }); }, 80); }
+  const flip = btn => btn.classList.toggle('on');
+  $$('[data-q]', q).forEach(btn => btn.onclick = async () => {
+    const on = btn.classList.contains('on'), k = btn.dataset.q;
+    if (k === 'wifi') { flip(btn); await rootCall('/api/net/radio', { on: !on }); setTimeout(refreshNetIcon, 1500); }
+    else if (k === 'bt') { flip(btn); const r = await api('/api/bt/power', { on: !on }); if (r.error) { flip(btn); toast('Bluetooth', r.error, 'err'); } }
+    else if (k === 'dnd') { flip(btn); SETTINGS.dnd = !on; saveSettings(); api('/api/dnd', { on: !on }); }
+    else if (k === 'night') { flip(btn); api('/api/power/settings', { night: !on }); }
+    else if (k === 'shot') { closePop(); setTimeout(() => api('/api/screenshot', {}), 250); }
+    else if (k === 'set') { closePop(); openApp('settings'); }
+  });
+  $$('[data-p]', q).forEach(btn => btn.onclick = () => { $$('[data-p]', q).forEach(x => x.classList.toggle('on', x === btn)); api('/api/power/settings', { profile: btn.dataset.p }); });
   $('.sf', q).onchange = e => { SETTINGS.sound = e.target.checked; saveSettings(); };
   $('.am', q).onchange = e => { SETTINGS.ambient = e.target.checked; saveSettings(); };
+}
+function renderCal(p, off = 0) {
+  const now = new Date(), d = new Date(now.getFullYear(), now.getMonth() + off, 1);
+  const days = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  let cells = '<span></span>'.repeat(d.getDay());
+  for (let i = 1; i <= days; i++) cells += `<span class="${off === 0 && i === now.getDate() ? 'today' : ''}">${i}</span>`;
+  p.innerHTML = `<h4>// ${esc(d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase())} <span><button class="mini pv" title="Mês anterior">‹</button> <button class="mini nx" title="Próximo mês">›</button></span></h4>
+    <div class="cal">${['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(x => `<b>${x}</b>`).join('')}${cells}</div>
+    <div class="cal-foot"><span>${esc(now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }))}</span><button class="mini ad">ajustar</button></div>`;
+  $('.pv', p).onclick = () => renderCal(p, off - 1);
+  $('.nx', p).onclick = () => renderCal(p, off + 1);
+  $('.ad', p).onclick = () => { closePop(); openApp('settings', 'region'); };
+}
+let DRIVES = [];
+async function refreshDrives() {
+  const d = await api('/api/drives').catch(() => ({}));
+  DRIVES = d.drives || [];
+  const b = $('#tDrv'), rem = DRIVES.filter(x => x.removable);
+  b.style.display = rem.length ? '' : 'none'; b.innerHTML = ICON.usb;
+  b.title = rem.length ? `${rem.length} pendrive(s) ou disco(s) externo(s)` : '';
+  if (POP && POP.btn === b) renderDrives(POP.el);
+}
+async function driveOpen(d) {
+  let path = d.mount;
+  if (!path) { const r = await api('/api/drives/mount', { dev: d.dev }); if (r.error) return toast('Não foi possível abrir', r.error, 'err'); path = r.path; }
+  if (path) openApp('files', path);
+}
+async function driveEject(d) {
+  const r = await api('/api/drives/eject', { dev: d.dev });
+  if (r.error) toast('Ainda em uso', r.error, 'err'); else toast('Pode remover com segurança', d.label || d.model || d.dev, 'ok');
+  refreshDrives();
+}
+function renderDrives(p) {
+  const rem = DRIVES.filter(x => x.removable);
+  p.innerHTML = `<h4>// DISPOSITIVOS</h4>${rem.length ? '' : '<div class="c-d">nenhum pendrive conectado</div>'}`;
+  rem.forEach(d => {
+    const r = el('div', 'drv', `<span>${ICON.usb}</span><div><b>${esc(d.label || d.model || 'Pendrive')}</b><small>${fmtSize(d.size)} · ${esc(d.fstype || '')}${d.mount ? '' : ' · não aberto'}</small></div><button class="mini op">abrir</button><button class="mini ej" title="Remover com segurança">⏏</button>`);
+    $('.op', r).onclick = () => { closePop(); driveOpen(d); };
+    $('.ej', r).onclick = () => driveEject(d);
+    p.appendChild(r);
+  });
 }
 function setVolIcon(a) { if (a && a.available) $('#tQuick').innerHTML = ICON.vol(a.muted || a.volume === 0); }
 function trayInit() {
   $('#tNet').onclick = () => popover($('#tNet'), renderNet);
   $('#tQuick').onclick = () => popover($('#tQuick'), renderQuick);
   $('#tQuick').innerHTML = ICON.vol(false);
-  $('#clock').onclick = () => toast(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
+  $('#clock').onclick = () => popover($('#clock'), p => renderCal(p));
+  $('#tDrv').onclick = () => popover($('#tDrv'), renderDrives);
   const cpuHist = [];
   const tick = () => {
     const now = new Date();
-    $('#clock').textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    $('#clock').textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', ...(SETTINGS.clockSec ? { second: '2-digit' } : {}) });
     if (STATS) {
       cpuHist.push(STATS.cpu); if (cpuHist.length > 12) cpuHist.shift();
       $('#tCpu').innerHTML = `CPU <span class="spark">${Ascii.on() ? Ascii.spark(cpuHist, 8) : ''}</span> ${Math.round(STATS.cpu)}%`;
@@ -508,6 +745,7 @@ const Lock = {
     $('#lockPw').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') this.submit(); });
     ['pointermove', 'keydown', 'pointerdown'].forEach(ev => document.addEventListener(ev, () => this.last = Date.now(), { passive: true }));
     setInterval(() => {
+      if (SYS.idle) return;                       // o swayidle cuida (vale também para apps nativos)
       const idle = Date.now() - this.last;
       if (!this.on && SETTINGS.lockIdle > 0 && idle > SETTINGS.lockIdle * 60000) this.show();
       if (!Saver.on && BACKEND && SETTINGS.saver > 0 && idle > SETTINGS.saver * 60000) Saver.show();
@@ -515,7 +753,8 @@ const Lock = {
   },
   show() {
     if (this.on || !BACKEND) return;
-    this.on = true; closePop(); toggleStart(false);
+    this.on = true; closePop(); closeStart();
+    api('/api/wm/shell', { temp: true }).then(() => api('/api/wm/guard', { on: true })).catch(() => {});
     $('#lock').classList.add('on'); $('#lockPw').value = ''; $('#lockMsg').textContent = '';
     $('#lock .hint').textContent = SYS.live || SYS.dev ? 'modo live — senha padrão: live' : '';
     if (Ascii.on()) this.fx = asciiLoop($('#lockFx'), 'donut', { size: 11, bg: null });
@@ -536,6 +775,7 @@ const Lock = {
       Ascii.scramble($('#lockDate'), 'ACESSO CONCEDIDO', 300);
       await sleep(Ascii.full() ? 380 : 0);
       this.on = false; this.last = Date.now(); $('#lock').classList.remove('on'); Sfx.open();
+      api('/api/wm/guard', { on: false }).then(() => api('/api/wm/restore', {})).catch(() => {});
       if (this.fx) { this.fx.stop(); this.fx = null; }
       return;
     }
@@ -551,7 +791,8 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.altKey && k === 'l') { e.preventDefault(); Lock.show(); }
   else if (e.altKey && !e.ctrlKey && k === 't') { e.preventDefault(); openApp('terminal'); }
   else if (e.metaKey && k === 'p') { e.preventDefault(); showDisplayMenu(); }
-  else if ((e.ctrlKey && k === 'escape') || (e.key === 'Meta' && !e.repeat)) toggleStart();
+  else if (e.ctrlKey && e.shiftKey && k === 'escape') { e.preventDefault(); openApp('tasks'); }
+  else if ((e.ctrlKey && k === 'escape') || (e.key === 'Meta' && !e.repeat && !WMOK)) toggleStart();
 });
 
 /* ---------------------------------------------------------- boot */
@@ -648,7 +889,8 @@ async function showDisplayMenu() {
   const m = el('div', 'modal dmenu', `<div class="box"><h3>// PROJETAR</h3><div class="dm-body"></div><p class="c-d" style="font-size:11px">Super+P ou ←/→ escolhe · Enter aplica · Esc fecha</p></div>`);
   document.body.appendChild(m);
   Ascii.scramble($('h3', m), '// PROJETAR', 300); Sfx.open();
-  const close = () => { m.remove(); document.removeEventListener('keydown', key, true); };
+  Layer.up(true);
+  const close = () => { m.remove(); Layer.down(); document.removeEventListener('keydown', key, true); };
   m._ctl = displayPanel($('.dm-body', m), close);
   const key = e => {
     if (['ArrowRight', 'ArrowDown'].includes(e.key) || (e.metaKey && e.key.toLowerCase() === 'p')) { e.preventDefault(); m._ctl.next(); }
@@ -661,7 +903,22 @@ async function showDisplayMenu() {
   document.addEventListener('keydown', key, true);
   m.addEventListener('pointerdown', e => { if (e.target === m) close(); });
 }
-function uiEvent(type) { if (type === 'display-menu' && !Lock.on) showDisplayMenu(); }
+function uiEvent(type, data) {
+  if (type === 'drives') { refreshDrives(); bus.emit('drives'); return; }
+  if (type === 'fs') { bus.emit('fs'); return; }
+  if (type === 'saver-off') { if (Saver.on) Saver.hide(); return; }
+  if (type === 'lock') return Lock.show();
+  if (Lock.on) return;
+  if (type === 'display-menu') showDisplayMenu();
+  else if (type === 'start-menu') toggleStart();
+  else if (type === 'files') openApp('files');
+  else if (type === 'terminal') openApp('terminal');
+  else if (type === 'tasks') openApp('tasks');
+  else if (type === 'saver') { if (!Saver.on) Saver.show(SETTINGS.saverFx); }
+  else if (type === 'open' && data) data.app ? openApp(data.app, data.path) : openPath(data.path);
+}
+/* tempos de protetor de tela e bloqueio valem para o sistema todo (swayidle) */
+const syncIdle = throttle(() => { if (SYS.idle) api('/api/power/settings', { saver: +SETTINGS.saver || 0, lock: +SETTINGS.lockIdle || 0 }).catch(() => {}); }, 1500);
 
 /* aviso de atualizações (a lista do apt é renovada todo dia pelo próprio Debian) */
 async function checkUpdates() {
@@ -689,13 +946,28 @@ async function start() {
   setupMonitors(await api('/api/displays').catch(() => ({ available: false })));
   addEventListener('resize', () => setupMonitors());
   setInterval(() => $$('.mon-clock').forEach(c => c.textContent = Ascii.big(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))), 1000);
-  buildDesktop(); buildStart(); trayInit(); refreshNetIcon(); pollStats(); pollEvents();
+  buildDesktop(); buildStart(); trayInit(); refreshNetIcon(); pollStats(); pollEvents(); refreshNative(); refreshDrives();
+  loadApps().then(() => { buildDesktop(); renderAllApps(); });
+  const sShow = Saver.show.bind(Saver), sHide = Saver.hide.bind(Saver);
+  Saver.show = fx => { Layer.up(true); sShow(fx); };
+  Saver.hide = () => { sHide(); Layer.down(); };
+  syncIdle(); bus.on('settings', syncIdle);
+  $('#desktop').oncontextmenu = e => {
+    if (e.target.closest('.icon')) return;
+    e.preventDefault();
+    ctxMenu(e.clientX, e.clientY, [
+      { label: 'Abrir terminal', fn: () => openApp('terminal') },
+      { label: 'Abrir arquivos', fn: () => openApp('files') },
+      { label: 'Papel de parede e cores…', fn: () => openApp('settings', 'look') },
+      { label: 'Monitores (Super+P)…', fn: () => showDisplayMenu() },
+      { label: 'Configurações', fn: () => openApp('settings') }]);
+  };
   api('/api/audio').then(setVolIcon).catch(() => {});
   $('#startBtn').onclick = e => { e.stopPropagation(); toggleStart(); };
-  document.addEventListener('pointerdown', e => { if (!e.target.closest('#startMenu') && e.target.id !== 'startBtn') $('#startMenu').classList.remove('open'); });
+  document.addEventListener('pointerdown', e => { if (!e.target.closest('#startMenu') && !e.target.closest('#startBtn') && !e.target.closest('.ctx')) closeStart(); });
   Ascii.wordmark();
   $('.wordmark small').textContent = `v${SYS.version} · LINUX · KERNEL GHOST`;
   setTimeout(checkUpdates, 20000); setInterval(checkUpdates, 6 * 3600 * 1000);
   if (SETTINGS.lockOnBoot) Lock.show();
-  else toast(`Bem-vindo, ${SYS.user}`, 'Duplo clique nos ícones · Alt+T abre o terminal · Ctrl+Alt+L bloqueia', 'ok');
+  else toast(`Bem-vindo, ${SYS.user}`, 'Tecla Windows abre o menu · Super+E arquivos · Print captura a tela · Ctrl+Shift+Esc tarefas', 'ok');
 }

@@ -1,6 +1,6 @@
 # NeonOS
 
-Sistema operacional leve com interface cyberpunk, baseado no **Debian 13 "trixie"** (a mesma base do LMDE 7), com o kernel Linux do Debian, bash e Firefox.
+Sistema operacional completo com interface cyberpunk, baseado no **Debian 13 "trixie"** (a mesma base do LMDE 7), com o kernel Linux do Debian, bash e Firefox.
 
 ## Estrutura
 
@@ -64,3 +64,38 @@ Vem pré-instalada (`steam-installer` + bibliotecas de 32 bits). Na primeira abe
 ## Cursor
 
 O tema **Neon** (`/usr/share/icons/Neon`) é gerado por `iso/cursor/make-cursors.py`, que usa python3-pil e xcursorgen. As cópias em PNG ficam em `neonos/cursors/` e são usadas pela interface.
+
+## Sistema completo (0.6)
+
+A interface do NeonOS convive com apps nativos (Steam, LibreOffice, apps do Flathub):
+
+- **Barra de tarefas** mostra as janelas dos apps nativos com o ícone de cada um (clique alterna/minimiza, botão direito fecha ou maximiza). Clicar na área de trabalho não esconde os apps abertos. A lista vem do protocolo wlr-foreign-toplevel do labwc, lido por `neonos/wl.py` (um cliente Wayland em Python puro).
+- **Menu iniciar** (tecla Windows) com busca: apps do NeonOS, todos os apps instalados e atalhos de configuração. Botão direito num app: fixar na área de trabalho ou abrir ao ligar.
+- **Arquivos**: seleção múltipla, copiar/recortar/colar, arrastar e soltar, lixeira com restaurar, busca nas subpastas, lista ou grade, miniaturas, compactar em .zip, extrair (zip, tar, 7z, rar...), propriedades, "Abrir com…", pendrives e outros discos (montados sozinhos ao conectar, com ejetar).
+- **Apps padrão**: pastas, textos, imagens e mídia abrem no NeonOS (`neon-open`); PDF no Evince, documentos no LibreOffice. Dá para trocar em Config → Apps padrão ou em "Abrir com…".
+- **Loja** com o Flathub (Discord, Spotify, OBS, Heroic, Bottles...) instalando por usuário, sem senha, e os pacotes do Debian. Programas → botão direito → Desinstalar.
+- **Config**: Bluetooth, impressoras e scanner, energia (modo de desempenho, desligar tela, suspender, luz noturna), teclado e fuso horário, apps padrão e inicialização, drivers (instala o da NVIDIA), firewall, troca de senha, atualizações do Flathub, hardware e backup (Timeshift).
+- **Tarefas** (Ctrl+Shift+Esc): processos com finalizar/forçar e janelas abertas.
+- Drivers e firmware de Wi-Fi, vídeo, som e Bluetooth, codecs, impressão, LibreOffice, VLC, leitor de PDF, calculadora, discos, emoji e fontes compatíveis com o Office já vêm na ISO.
+
+### Tema neon dos apps nativos
+
+`/usr/share/themes/NeonOS` tem o tema GTK 3 (LibreOffice, Discos, impressoras, Bluetooth, Timeshift e, pelo platformtheme gtk3, os apps Qt como o VLC) e o GTK 4. Os apps libadwaita (Calculadora, Digitalizador) recebem as cores pelo `~/.config/gtk-4.0/gtk.css`. O nome do tema vem do dconf (`/etc/dconf/db/local.d/00-neonos`), que é o que o GTK lê no Wayland.
+
+### Atalhos
+
+| Tecla | Ação |
+|---|---|
+| Windows | menu iniciar com busca |
+| Super+E | arquivos |
+| Super+D | mostrar a área de trabalho |
+| Super+L | bloquear |
+| Super+P | monitores |
+| Super+Espaço | trazer a interface NeonOS para frente |
+| Super+Enter | terminal |
+| Print / Shift+Print / Super+Shift+S | capturar a tela / uma área |
+| Super+Shift+R | gravar a tela (de novo para parar) |
+| Ctrl+Shift+Esc | gerenciador de tarefas |
+| Alt+Tab | alternar janelas |
+
+O `rc.xml` do labwc é recriado a cada login a partir de `/usr/share/neonos/labwc/rc.xml`, para que atualizações tragam atalhos novos. Para editar à mão, coloque um comentário `neonos:manual` nele.

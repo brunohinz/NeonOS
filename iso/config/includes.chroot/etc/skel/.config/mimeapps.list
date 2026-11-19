@@ -1,0 +1,27 @@
+[Default Applications]
+inode/directory=neonos-files.desktop;
+text/plain=neonos-editor.desktop;
+text/markdown=neonos-editor.desktop;
+application/json=neonos-editor.desktop;
+application/x-shellscript=neonos-editor.desktop;
+text/x-python=neonos-editor.desktop;
+image/png=neonos-viewer.desktop;
+image/jpeg=neonos-viewer.desktop;
+image/gif=neonos-viewer.desktop;
+image/webp=neonos-viewer.desktop;
+image/svg+xml=neonos-viewer.desktop;
+image/bmp=neonos-viewer.desktop;
+audio/mpeg=neonos-player.desktop;
+audio/ogg=neonos-player.desktop;
+audio/flac=neonos-player.desktop;
+audio/x-wav=neonos-player.desktop;
+audio/mp4=neonos-player.desktop;
+video/mp4=neonos-player.desktop;
+video/webm=neonos-player.desktop;
+video/x-matroska=neonos-player.desktop;
+video/x-msvideo=vlc.desktop;
+video/x-ms-wmv=vlc.desktop;
+application/pdf=org.gnome.Evince.desktop;
+text/html=firefox-esr.desktop;
+x-scheme-handler/http=firefox-esr.desktop;
+x-scheme-handler/https=firefox-esr.desktop;

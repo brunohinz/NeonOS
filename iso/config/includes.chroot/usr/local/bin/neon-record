@@ -1,0 +1,22 @@
+#!/bin/bash
+# neon-record — liga/desliga a gravação da tela (Super+Shift+R). Vídeos em Vídeos/Gravações.
+pidf="${XDG_RUNTIME_DIR:-/tmp}/neon-record.pid"
+if [ -f "$pidf" ] && kill -0 "$(cat "$pidf")" 2>/dev/null; then
+  kill -INT "$(cat "$pidf")"; f=$(cat "$pidf.file" 2>/dev/null); rm -f "$pidf" "$pidf.file"
+  sleep 1; neon-notify "Gravação salva" "$(basename "$f")" ok; exit 0
+fi
+command -v wf-recorder >/dev/null || { neon-notify "Gravação indisponível" "instale o wf-recorder" err; exit 1; }
+dir="$(xdg-user-dir VIDEOS 2>/dev/null || echo "$HOME/Vídeos")/Gravações"
+[ "$dir" = "$HOME/Gravações" ] && dir="$HOME/Vídeos/Gravações"
+mkdir -p "$dir"
+f="$dir/gravacao-$(date +%Y-%m-%d_%H-%M-%S).mp4"
+args=(-f "$f")
+# vários monitores: clique no que quer gravar
+if [ "$(wlr-randr 2>/dev/null | grep -c '^[^ ]')" -gt 1 ]; then
+  out=$(slurp -o -f %o -b 05060ccc -c 00f0ffff) || exit 0; args+=(-o "$out")
+fi
+# som do computador (o que está tocando)
+if command -v pactl >/dev/null; then sink=$(pactl get-default-sink 2>/dev/null); [ -n "$sink" ] && args+=(--audio="$sink.monitor"); fi
+wf-recorder "${args[@]}" >/tmp/neon-record.log 2>&1 &
+echo $! > "$pidf"; echo "$f" > "$pidf.file"
+neon-notify "Gravando a tela" "Super+Shift+R de novo para parar" info

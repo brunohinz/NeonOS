@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Arquivos (NeonOS)
+Comment=Abre pastas no gerenciador de arquivos do NeonOS
+Exec=neon-open --app files %U
+Icon=system-file-manager
+MimeType=inode/directory;
+NoDisplay=true

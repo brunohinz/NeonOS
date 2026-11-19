@@ -1,0 +1,133 @@
+/* NeonOS — tema GTK 3 neon (também usado pelos apps Qt via platformtheme gtk3).
+   Base: Adwaita escuro embutido no GTK; por cima, as cores e formas do NeonOS. */
+@import url("resource:///org/gtk/libgtk/theme/Adwaita/gtk-contained-dark.css");
+
+@define-color neon_bg #0a0b14;
+@define-color neon_panel #0e1020;
+@define-color neon_deep #05060a;
+@define-color neon_text #cfe9ff;
+@define-color neon_dim #5d7a99;
+@define-color neon_cyan #00f0ff;
+@define-color neon_hot #ff2a6d;
+@define-color neon_line rgba(0, 240, 255, 0.32);
+
+/* nomes que os apps usam */
+@define-color theme_bg_color @neon_bg;
+@define-color theme_fg_color @neon_text;
+@define-color theme_base_color @neon_deep;
+@define-color theme_text_color @neon_text;
+@define-color theme_selected_bg_color @neon_cyan;
+@define-color theme_selected_fg_color @neon_deep;
+@define-color insensitive_fg_color @neon_dim;
+@define-color borders @neon_line;
+@define-color accent_color @neon_cyan;
+@define-color accent_bg_color @neon_cyan;
+@define-color accent_fg_color @neon_deep;
+@define-color warning_color #f5e663;
+@define-color error_color @neon_hot;
+@define-color success_color #39ff14;
+
+* { border-radius: 0; outline-color: alpha(@neon_cyan, 0.6); }
+radio, radio:checked { border-radius: 100%; }
+
+window, .background, dialog { background-color: @neon_bg; color: @neon_text; }
+.view, textview text, iconview, treeview.view, list, listbox { background-color: @neon_deep; color: @neon_text; }
+label:disabled, .dim-label { color: @neon_dim; }
+
+/* barras de título e de ferramentas */
+headerbar, .titlebar, toolbar, .toolbar, menubar, actionbar {
+  background: linear-gradient(90deg, rgba(0, 240, 255, 0.13), rgba(255, 42, 109, 0.07)), @neon_panel;
+  border-color: @neon_line; box-shadow: none; color: @neon_text;
+}
+headerbar { border-bottom: 1px solid @neon_line; }
+headerbar .title, .titlebar .title { font-family: "JetBrains Mono", monospace; letter-spacing: 1px; color: @neon_cyan; }
+headerbar .subtitle { color: @neon_dim; }
+menubar > menuitem:hover { background: alpha(@neon_cyan, 0.15); color: @neon_cyan; box-shadow: inset 0 -2px @neon_cyan; }
+
+/* botões */
+button {
+  background: rgba(0, 0, 0, 0.35); background-image: none; border: 1px solid @neon_line;
+  color: @neon_text; box-shadow: none; text-shadow: none; -gtk-icon-shadow: none;
+}
+button:hover { background: alpha(@neon_cyan, 0.14); border-color: @neon_cyan; color: @neon_cyan; }
+button:active, button:checked { background: @neon_cyan; border-color: @neon_cyan; color: @neon_deep; }
+button:disabled { background: transparent; border-color: alpha(@neon_cyan, 0.12); color: @neon_dim; }
+button.flat, headerbar button.flat, .titlebar button.titlebutton { background: transparent; border-color: transparent; }
+button.flat:hover, button.titlebutton:hover { border-color: @neon_line; background: alpha(@neon_cyan, 0.1); }
+button.titlebutton.close:hover { background: @neon_hot; border-color: @neon_hot; color: @neon_deep; }
+button.suggested-action { background: alpha(@neon_cyan, 0.18); border-color: @neon_cyan; color: @neon_cyan; }
+button.suggested-action:hover { background: @neon_cyan; color: @neon_deep; }
+button.destructive-action { background: alpha(@neon_hot, 0.12); border-color: @neon_hot; color: @neon_hot; }
+button.destructive-action:hover { background: @neon_hot; color: @neon_deep; }
+
+/* campos de texto */
+entry, spinbutton:not(.vertical), textview.view {
+  background: @neon_deep; background-image: none; border: 1px solid @neon_line;
+  color: @neon_cyan; box-shadow: none; caret-color: @neon_hot;
+}
+entry:focus, spinbutton:focus { border-color: @neon_cyan; box-shadow: inset 0 0 0 1px alpha(@neon_cyan, 0.35); }
+entry selection, textview text selection, label selection { background-color: @neon_hot; color: @neon_deep; }
+entry image { color: @neon_dim; }
+
+/* seleção em listas */
+row:selected, treeview.view:selected, iconview:selected, .view:selected, flowboxchild:selected {
+  background-color: alpha(@neon_cyan, 0.22); color: #ffffff; box-shadow: inset 2px 0 @neon_cyan;
+}
+row:hover { background-color: alpha(@neon_cyan, 0.07); }
+treeview header button { background: @neon_panel; color: @neon_hot; border-color: @neon_line; font-family: "JetBrains Mono", monospace; }
+
+/* menus, popups e dicas */
+menu, .menu, .context-menu, popover.background, popover > contents {
+  background-color: @neon_panel; border: 1px solid @neon_cyan; box-shadow: 0 0 18px alpha(@neon_cyan, 0.15);
+}
+menu menuitem, popover modelbutton { color: @neon_text; }
+menu menuitem:hover, popover modelbutton:hover { background-color: @neon_cyan; color: @neon_deep; }
+menu menuitem:disabled { color: @neon_dim; }
+menu separator, popover separator { background: @neon_line; }
+tooltip, tooltip.background { background-color: @neon_panel; border: 1px solid @neon_hot; color: @neon_text; }
+
+/* abas */
+notebook > header { background: @neon_panel; border-color: @neon_line; }
+notebook > header tab { color: @neon_dim; }
+notebook > header tab:hover { color: @neon_cyan; }
+notebook > header tab:checked { color: @neon_cyan; box-shadow: inset 0 -2px @neon_hot; }
+stackswitcher button:checked { background: alpha(@neon_cyan, 0.2); color: @neon_cyan; }
+
+/* barras laterais */
+.sidebar, placessidebar, stacksidebar, .navigation-sidebar { background-color: @neon_deep; border-color: @neon_line; }
+placessidebar row:selected { box-shadow: inset 2px 0 @neon_hot; }
+
+/* interruptores, caixas de marcar, deslizantes, progresso */
+switch { background: @neon_deep; border: 1px solid @neon_line; }
+switch:checked { background: alpha(@neon_cyan, 0.85); border-color: @neon_cyan; }
+switch slider { background: @neon_text; border: none; box-shadow: none; }
+switch:checked slider { background: @neon_deep; }
+check, radio { background: @neon_deep; background-image: none; border: 1px solid @neon_line; color: @neon_deep; }
+check:checked, radio:checked, check:indeterminate { background: @neon_cyan; border-color: @neon_cyan; }
+scale trough, progressbar trough, levelbar trough { background: alpha(@neon_cyan, 0.12); border: none; box-shadow: none; }
+scale highlight, progressbar progress, levelbar block.filled { background: @neon_cyan; border: none; box-shadow: 0 0 8px alpha(@neon_cyan, 0.5); }
+scale slider { background: @neon_deep; border: 2px solid @neon_cyan; box-shadow: none; }
+scrollbar { background: transparent; border: none; }
+scrollbar slider { background-color: alpha(@neon_cyan, 0.35); min-width: 6px; min-height: 6px; border: none; }
+scrollbar slider:hover { background-color: @neon_cyan; }
+
+/* diversos */
+frame > border, .frame { border-color: @neon_line; }
+separator { background: @neon_line; }
+link, *:link { color: @neon_hot; }
+infobar { background: @neon_panel; border-color: @neon_hot; }
+.osd, .app-notification { background: @neon_panel; border: 1px solid @neon_cyan; }
+calendar:selected { background: @neon_cyan; color: @neon_deep; }
+
+/* sobras do Adwaita (cinzas e azuis) */
+notebook > stack:not(:only-child), notebook > stack { background-color: @neon_deep; }
+textview > text, textview text, .view text { background-color: @neon_deep; color: @neon_text; }
+entry:disabled, spinbutton:disabled { background: alpha(@neon_deep, 0.6); color: @neon_dim; border-color: alpha(@neon_cyan, 0.12); }
+button.link, button.link > label, *:link, label:link, button:link, button:visited { color: @neon_hot; }
+notebook > header.top > tabs > tab:checked { box-shadow: inset 0 -2px @neon_hot; }
+notebook > header.bottom > tabs > tab:checked { box-shadow: inset 0 2px @neon_hot; }
+notebook > header.left > tabs > tab:checked { box-shadow: inset -2px 0 @neon_hot; }
+notebook > header.right > tabs > tab:checked { box-shadow: inset 2px 0 @neon_hot; }
+checkbutton check:checked, checkbutton check:indeterminate, radiobutton radio:checked, radiobutton radio:indeterminate,
+treeview.view check:checked, treeview.view radio:checked, check:indeterminate, radio:indeterminate {
+  background-color: @neon_cyan; background-image: none; border-color: @neon_cyan; color: @neon_deep; }

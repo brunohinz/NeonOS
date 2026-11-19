@@ -16,11 +16,9 @@ mkdir -p "$inc/opt/neonos" "$inc/usr/local/bin" out
 cp -r ../neonos/. "$inc/opt/neonos/"
 rm -rf "$inc/opt/neonos/__pycache__"
 cp ../neonos/neon-browser.sh "$inc/usr/local/bin/neon-browser"
-cp ../neonos/neon-notify "$inc/usr/local/bin/neon-notify"
-cp ../neonos/neon-flatpak "$inc/usr/local/bin/neon-flatpak"
-cp ../neonos/neon "$inc/usr/local/bin/neon"
-cp ../neonos/neon-update "$inc/usr/local/bin/neon-update"
-cp ../neonos/neon-display "$inc/usr/local/bin/neon-display"
+for c in neon neon-notify neon-flatpak neon-update neon-display neon-shot neon-record neon-osd neon-open; do
+  cp "../neonos/$c" "$inc/usr/local/bin/$c"
+done
 chmod +x auto/config config/hooks/normal/*.hook.chroot "$inc/usr/local/bin/"* "$inc/opt/neonos/"*.sh \
          "$inc/etc/skel/.config/labwc/neonos-start.sh"
 

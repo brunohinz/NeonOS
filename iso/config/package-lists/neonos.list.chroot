@@ -56,3 +56,129 @@ firmware-misc-nonfree
 procps
 pciutils
 flatpak
+
+# ---- NeonOS 0.6: sistema completo ----
+# Drivers e firmware (Wi-Fi, placas de vídeo, som, Bluetooth, microcódigo)
+firmware-linux
+firmware-linux-nonfree
+firmware-realtek
+firmware-iwlwifi
+firmware-atheros
+firmware-brcm80211
+firmware-mediatek
+firmware-libertas
+firmware-amd-graphics
+firmware-sof-signed
+firmware-intel-sound
+bluez-firmware
+intel-microcode
+amd64-microcode
+mesa-vulkan-drivers
+mesa-va-drivers
+intel-media-va-driver
+nvidia-detect
+lm-sensors
+
+# Apps nativos integrados (janelas, senha de administrador, portais, notificações, temas)
+xdg-desktop-portal
+xdg-desktop-portal-wlr
+xdg-desktop-portal-gtk
+xdg-utils
+xdg-user-dirs
+desktop-file-utils
+shared-mime-info
+mate-polkit
+gnome-keyring
+libpam-gnome-keyring
+mako-notifier
+libnotify-bin
+dconf-cli
+papirus-icon-theme
+adwaita-icon-theme
+gnome-themes-extra
+qt6-gtk-platformtheme
+
+# Captura e gravação de tela, inatividade, luz noturna, teclas de mídia
+grim
+slurp
+wl-clipboard
+wf-recorder
+swayidle
+wlopm
+gammastep
+playerctl
+pulseaudio-utils
+pavucontrol
+
+# Pendrives, discos e arquivos compactados
+udisks2
+gvfs
+gvfs-backends
+gvfs-fuse
+ntfs-3g
+exfatprogs
+dosfstools
+gnome-disk-utility
+gparted
+7zip
+unrar
+zip
+unzip
+libarchive-tools
+file-roller
+libfuse2t64
+
+# Bluetooth
+bluez
+blueman
+
+# Impressoras e scanners
+cups
+cups-browsed
+cups-filters
+printer-driver-all
+hplip
+ipp-usb
+avahi-daemon
+libnss-mdns
+system-config-printer
+simple-scan
+sane-airscan
+
+# Codecs de áudio e vídeo
+gstreamer1.0-plugins-good
+gstreamer1.0-plugins-bad
+gstreamer1.0-plugins-ugly
+gstreamer1.0-libav
+ffmpeg
+
+# Apps do dia a dia
+libreoffice-writer
+libreoffice-calc
+libreoffice-impress
+libreoffice-gtk3
+libreoffice-l10n-pt-br
+hunspell-pt-br
+vlc
+evince
+gnome-calculator
+timeshift
+
+# Jogos
+gamemode
+mangohud
+
+# Energia e segurança
+power-profiles-daemon
+upower
+ufw
+
+# Rede avançada (VPN)
+network-manager-gnome
+network-manager-openvpn-gnome
+
+# Fontes (emoji, acentos, japonês/chinês, compatíveis com Office)
+fonts-noto-core
+fonts-noto-color-emoji
+fonts-noto-cjk
+fonts-liberation2

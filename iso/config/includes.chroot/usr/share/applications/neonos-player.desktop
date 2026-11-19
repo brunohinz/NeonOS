@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Player (NeonOS)
+Comment=Toca músicas e vídeos no player do NeonOS
+Exec=neon-open --app player %F
+Icon=multimedia-player
+MimeType=audio/mpeg;audio/ogg;audio/flac;audio/x-flac;audio/x-wav;audio/wav;audio/mp4;audio/aac;audio/opus;video/mp4;video/webm;video/x-matroska;video/quicktime;
+NoDisplay=true

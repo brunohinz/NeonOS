@@ -2,8 +2,19 @@
 # Ajustes finais do NeonOS dentro do sistema (roda durante a montagem da ISO)
 set -e
 
-chmod +x /usr/local/bin/neon /usr/local/bin/neon-update /usr/local/bin/neon-display /usr/local/bin/neon-browser /usr/local/bin/neon-notify /usr/local/bin/neon-flatpak /opt/neonos/*.sh /opt/neonos/neon /opt/neonos/neon-update /opt/neonos/neon-display /opt/neonos/neon-notify || true
+chmod +x /usr/local/bin/neon* /opt/neonos/*.sh /opt/neonos/neon /opt/neonos/neon-* || true
 chmod +x /etc/skel/.config/labwc/neonos-start.sh || true
+
+# apps padrão (pastas, textos, imagens e mídia abrem no NeonOS), tema escuro dos apps nativos
+update-desktop-database -q /usr/share/applications || true
+dconf update || true
+
+# Flathub: catálogo de apps (Discord, Spotify, OBS...) — a Loja instala por usuário, sem senha
+curl -fsSL --retry 3 -o /usr/share/neonos/flathub.flatpakrepo https://dl.flathub.org/repo/flathub.flatpakrepo || true
+[ -s /usr/share/neonos/flathub.flatpakrepo ] && flatpak remote-add --system --if-not-exists flathub /usr/share/neonos/flathub.flatpakrepo || true
+
+# firewall instalado, mas desligado até o usuário ativar em Config → Segurança
+ufw --force disable >/dev/null 2>&1 || true
 
 # tela de boot
 plymouth-set-default-theme neonos

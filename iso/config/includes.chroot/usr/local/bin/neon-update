@@ -28,10 +28,10 @@ need_root() { [ "$(id -u)" = 0 ] || die "precisa de root: rode com sudo"; }
 need_repo() { [ -n "$REPO" ] || die "nenhum repositório configurado. Use: sudo neon-update --set-repo usuario/repositorio"; }
 
 install_cmds() {
-  install -m755 "$OPT/neon" /usr/local/bin/neon
-  install -m755 "$OPT/neon-notify" /usr/local/bin/neon-notify
   install -m755 "$OPT/neon-browser.sh" /usr/local/bin/neon-browser
-  [ -f "$OPT/neon-display" ] && install -m755 "$OPT/neon-display" /usr/local/bin/neon-display
+  for c in neon neon-notify neon-flatpak neon-display neon-shot neon-record neon-osd neon-open; do
+    [ -f "$OPT/$c" ] && install -m755 "$OPT/$c" "/usr/local/bin/$c"
+  done
   install -m755 "$OPT/neon-update" /usr/local/bin/neon-update   # install troca o arquivo sem afetar este processo
 }
 
@@ -77,7 +77,8 @@ sync_user_files() {
 apply() {
   need_root; need_repo
   local tmp src old new inc
-  tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+  TMPD=$(mktemp -d); tmp=$TMPD
+  trap 'rm -rf "${TMPD:-}"' EXIT   # variável global: o trap roda depois que a função já terminou
   say "baixando $REPO ($BRANCH)…"
   if [ -n "${NEON_UPDATE_TGZ:-}" ]; then cp "$NEON_UPDATE_TGZ" "$tmp/src.tgz"   # testes: usa um pacote local
   else curl -fsSL --retry 2 "https://codeload.github.com/$REPO/tar.gz/refs/heads/$BRANCH" -o "$tmp/src.tgz" || die "não consegui baixar do GitHub (o repositório é público?)"; fi
@@ -100,12 +101,20 @@ apply() {
   [ -d "$src/neonos/vendor" ] || cp -a "$OPT/vendor" "$src/neonos/" 2>/dev/null || true
   rm -rf "$OPT.new"; cp -a "$src/neonos" "$OPT.new"
   rm -rf "$OPT"; mv "$OPT.new" "$OPT"
-  chmod +x "$OPT"/*.sh "$OPT/neon" "$OPT/neon-notify" "$OPT/neon-update" "$OPT/neon-display" 2>/dev/null || true
+  chmod +x "$OPT"/*.sh "$OPT/neon" "$OPT/neon-notify" "$OPT/neon-update" "$OPT/neon-display" "$OPT/neon-flatpak" 2>/dev/null || true
   install_cmds
 
   inc="$src/iso/config/includes.chroot"
   if [ -d "$inc/usr/share/icons" ]; then cp -a "$inc/usr/share/icons/." /usr/share/icons/; fi   # tema de cursor
   if [ -d "$inc/usr/share/neonos" ]; then mkdir -p /usr/share/neonos; cp -a "$inc/usr/share/neonos/." /usr/share/neonos/; fi
+  # apps padrão do NeonOS (pastas, textos, imagens, mídia), portais e tema escuro dos apps nativos
+  if compgen -G "$inc/usr/share/applications/neonos-*.desktop" >/dev/null; then
+    cp "$inc"/usr/share/applications/neonos-*.desktop /usr/share/applications/
+    update-desktop-database -q /usr/share/applications 2>/dev/null || true
+  fi
+  if [ -d "$inc/usr/share/themes" ]; then mkdir -p /usr/share/themes; cp -a "$inc/usr/share/themes/." /usr/share/themes/; fi   # tema neon dos apps nativos
+  if [ -d "$inc/usr/share/xdg-desktop-portal" ]; then mkdir -p /usr/share/xdg-desktop-portal; cp -a "$inc/usr/share/xdg-desktop-portal/." /usr/share/xdg-desktop-portal/; fi
+  if [ -d "$inc/etc/dconf" ]; then mkdir -p /etc/dconf; cp -a "$inc/etc/dconf/." /etc/dconf/; command -v dconf >/dev/null && dconf update || true; fi
   if [ -d "$inc/usr/share/plymouth/themes/neonos" ] && ! diff -rq "$inc/usr/share/plymouth/themes/neonos" /usr/share/plymouth/themes/neonos >/dev/null 2>&1; then
     say "atualizando a tela de boot…"
     mkdir -p /usr/share/plymouth/themes/neonos
@@ -122,14 +131,22 @@ apply() {
 
   # programas novos que a versão nova precisa (ignora os do modo live e o instalador)
   local list="$src/iso/config/package-lists/neonos.list.chroot" missing=""
-  if [ -f "$list" ]; then
+  if [ -f "$list" ] && [ -z "${NEON_UPDATE_NO_APT:-}" ]; then   # NEON_UPDATE_NO_APT: só para testes
     for p in $(grep -vE '^\s*(#|$)' "$list" | grep -vE '^(live-|calamares)'); do
       dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q '^install ok installed' || missing="$missing $p"
     done
     if [ -n "$missing" ]; then
-      say "instalando programas novos:$missing"
-      DEBIAN_FRONTEND=noninteractive apt-get install -y $missing || say "alguns programas não puderam ser instalados"
+      say "instalando programas novos (pode demorar, são vários):$missing"
+      apt-get update || true
+      DEBIAN_FRONTEND=noninteractive apt-get install -y $missing || {
+        say "instalando um por um os que deram problema…"
+        for p in $missing; do DEBIAN_FRONTEND=noninteractive apt-get install -y "$p" >/dev/null 2>&1 || say "  não foi possível instalar: $p"; done
+      }
     fi
+  fi
+  # catálogo do Flathub para a Loja
+  if command -v flatpak >/dev/null; then
+    flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1 || true
   fi
   ok "NeonOS atualizado para a versão $new"
 }

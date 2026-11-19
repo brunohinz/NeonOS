@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Imagem (NeonOS)
+Comment=Abre imagens no visualizador do NeonOS
+Exec=neon-open --app viewer %F
+Icon=image-viewer
+MimeType=image/png;image/jpeg;image/gif;image/webp;image/svg+xml;image/bmp;image/avif;
+NoDisplay=true

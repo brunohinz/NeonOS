@@ -1,4 +1,10 @@
 <?xml version="1.0"?>
+<!--
+  Configuração do labwc do NeonOS. A cada login o neon-display recria ~/.config/labwc/rc.xml
+  a partir de /usr/share/neonos/labwc/rc.xml (assim as atualizações trazem atalhos novos).
+  Para editar este arquivo à mão sem que ele seja recriado, coloque numa linha própria um
+  comentário XML contendo só o texto neonos:manual
+-->
 <labwc_config>
   <core>
     <decoration>server</decoration>
@@ -14,30 +20,69 @@
     <font place="OnScreenDisplay"><name>JetBrains Mono</name><size>11</size></font>
   </theme>
 
+  <!-- espaço da barra de tarefas: apps maximizados não ficam por cima dela
+       (o labwc lê a margem ao iniciar; o neon-display ajusta para o monitor principal) -->
+  <!-- neonos:margin-begin -->
+  <margin bottom="44" />
+  <!-- neonos:margin-end -->
+
   <keyboard>
     <default />
-    <!-- Super+Espaço: volta para a interface NeonOS -->
-    <keybind key="W-space">
-      <action name="Execute" command="wlrctl toplevel focus app_id:neonos-shell" />
-    </keybind>
-    <!-- Super+B: navegador -->
-    <keybind key="W-b">
-      <action name="Execute" command="neon-browser" />
-    </keybind>
+    <!-- tecla Windows sozinha: menu iniciar -->
+    <keybind key="Super_L" onRelease="yes"><action name="Execute" command="neon-notify --ui start-menu" /></keybind>
+    <keybind key="Super_R" onRelease="yes"><action name="Execute" command="neon-notify --ui start-menu" /></keybind>
+    <keybind key="A-F3"><action name="Execute" command="neon-notify --ui start-menu" /></keybind>
+    <!-- Super+Espaço: traz a interface NeonOS para frente -->
+    <keybind key="W-space"><action name="Execute" command="neon-notify --ui shell" /></keybind>
+    <keybind key="W-d"><action name="Execute" command="neon-notify --ui show-desktop" /></keybind>
+    <keybind key="W-e"><action name="Execute" command="neon-notify --ui files" /></keybind>
+    <keybind key="W-l"><action name="Execute" command="neon-notify --ui lock" /></keybind>
+    <keybind key="W-Return"><action name="Execute" command="neon-notify --ui terminal" /></keybind>
+    <keybind key="C-S-Escape"><action name="Execute" command="neon-notify --ui tasks" /></keybind>
+    <keybind key="W-b"><action name="Execute" command="neon-browser" /></keybind>
     <!-- Super+P: modos de monitor (como no Windows) -->
-    <keybind key="W-p">
-      <action name="Execute" command="neon-notify --ui display-menu" />
-    </keybind>
+    <keybind key="W-p"><action name="Execute" command="neon-notify --ui display-menu" /></keybind>
     <!-- Super+Q: fecha a janela atual (exceto a interface, que reabre sozinha) -->
-    <keybind key="W-q">
-      <action name="Close" />
-    </keybind>
+    <keybind key="W-q"><action name="Close" /></keybind>
+    <!-- capturas de tela e gravação -->
+    <keybind key="Print"><action name="Execute" command="/opt/neonos/neon-shot tela" /></keybind>
+    <keybind key="S-Print"><action name="Execute" command="/opt/neonos/neon-shot area" /></keybind>
+    <keybind key="W-S-s"><action name="Execute" command="/opt/neonos/neon-shot area" /></keybind>
+    <keybind key="W-S-r"><action name="Execute" command="/opt/neonos/neon-record" /></keybind>
+    <!-- teclas de mídia, volume e brilho -->
+    <keybind key="XF86_AudioRaiseVolume"><action name="Execute" command="/opt/neonos/neon-osd volume up" /></keybind>
+    <keybind key="XF86_AudioLowerVolume"><action name="Execute" command="/opt/neonos/neon-osd volume down" /></keybind>
+    <keybind key="XF86_AudioMute"><action name="Execute" command="/opt/neonos/neon-osd volume mute" /></keybind>
+    <keybind key="XF86_AudioMicMute"><action name="Execute" command="/opt/neonos/neon-osd mic mute" /></keybind>
+    <keybind key="XF86_MonBrightnessUp"><action name="Execute" command="/opt/neonos/neon-osd brightness up" /></keybind>
+    <keybind key="XF86_MonBrightnessDown"><action name="Execute" command="/opt/neonos/neon-osd brightness down" /></keybind>
+    <keybind key="XF86_AudioPlay"><action name="Execute" command="playerctl play-pause" /></keybind>
+    <keybind key="XF86_AudioPause"><action name="Execute" command="playerctl play-pause" /></keybind>
+    <keybind key="XF86_AudioNext"><action name="Execute" command="playerctl next" /></keybind>
+    <keybind key="XF86_AudioPrev"><action name="Execute" command="playerctl previous" /></keybind>
   </keyboard>
+
+  <mouse>
+    <default />
+    <!-- clicar na área de trabalho ou na barra do NeonOS não esconde os apps abertos:
+         a interface só ganha o foco; ela mesma vem para frente quando precisa -->
+    <context name="Client">
+      <mousebind button="Left" action="Press">
+        <action name="If"><query identifier="neonos-shell" /><then><action name="Focus" /></then><else><action name="Focus" /><action name="Raise" /></else></action>
+      </mousebind>
+      <mousebind button="Middle" action="Press">
+        <action name="If"><query identifier="neonos-shell" /><then><action name="Focus" /></then><else><action name="Focus" /><action name="Raise" /></else></action>
+      </mousebind>
+      <mousebind button="Right" action="Press">
+        <action name="If"><query identifier="neonos-shell" /><then><action name="Focus" /></then><else><action name="Focus" /><action name="Raise" /></else></action>
+      </mousebind>
+    </context>
+  </mouse>
 
   <windowRules>
     <!-- a interface cobre todos os monitores, sem bordas (o neon-display ajusta este bloco) -->
     <!-- neonos:shell-begin -->
-    <windowRule identifier="neonos-shell" serverDecoration="no" skipTaskbar="yes">
+    <windowRule identifier="neonos-shell" serverDecoration="no">
       <action name="Maximize" />
     </windowRule>
     <!-- neonos:shell-end -->
